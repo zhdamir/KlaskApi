@@ -5,6 +5,7 @@ namespace KlaskApi.Models;
 public class BenutzerRolle
 {
 
+    //Authentication test git
     [Key]
     public long RolleId { get; set; }
     public String BezeichnungRolle { get; set; }
