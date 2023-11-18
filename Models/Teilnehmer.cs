@@ -12,7 +12,6 @@ public class Teilnehmer
     public String Vorname { get; set; }
     public String Nachname { get; set; }
     public String Email { get; set; }
-    public long RoleId { get; set; }
 
 
     public long BereichId { get; set; }
@@ -24,11 +23,9 @@ public class Teilnehmer
     [ForeignKey("RolleId")]
     public BenutzerRolle Rolle { get; set; }
 
-    public long GruppeId { get; set; }
-    [ForeignKey("GruppeId")]
-    public Gruppe Gruppe { get; set; }
 
     public List<SpielTeilnehmer> SpielTeilnehmerListe { get; set; }
+    public List<TurnierTeilnehmer> TurnierTeilnehmerListe { get; set; }
 
 
 }

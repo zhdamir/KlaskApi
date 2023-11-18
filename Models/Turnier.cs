@@ -9,5 +9,6 @@ public class Turnier
     public long AnazhlGruppen { get; set; }
     public List<Gruppe> Gruppen { get; set; } = new List<Gruppe>();
     public List<Runde> Runden { get; set; } = new List<Runde>();
+    public List<TurnierTeilnehmer> TurnierTeilnehmerListe { get; set; }
 
 }

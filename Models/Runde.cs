@@ -10,7 +10,7 @@ public class Runde
 {
     [Key]
     public long RundeId { get; set; }
-    public string? RundeBezeichnung { get; set; }
+    public string RundeBezeichnung { get; set; }
 
     [Required]
     public long TurnierId { get; set; }

@@ -21,6 +21,7 @@ public class TurnierContext : DbContext
     public DbSet<Spiel> Spiele { get; set; }
     public DbSet<SpielTeilnehmer> SpieleTeilnehmer { get; set; }
     public DbSet<BenutzerRolle> BenutzerRollen { get; set; }
+    public DbSet<TurnierTeilnehmer> TurniereTeilnehmer { get; set; }
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -34,21 +35,42 @@ public class TurnierContext : DbContext
         modelBuilder.Entity<Spiel>().ToTable("Spiele");
         modelBuilder.Entity<SpielTeilnehmer>().ToTable("SpieleTeilnehmer");
         modelBuilder.Entity<BenutzerRolle>().ToTable("BenutzerRolle");
+        modelBuilder.Entity<TurnierTeilnehmer>().ToTable("TurnierTeilnehmer");
+
+        /*Turnier Beziwhungen*/
         // Hier definierst du die Beziehung zwischen Turnieren und Gruppen
         modelBuilder.Entity<Gruppe>()
             .HasOne(g => g.Turnier)   // Jede Gruppe gehört zu einem Turnier
             .WithMany(t => t.Gruppen)  // Ein Turnier kann viele Gruppen haben
             .HasForeignKey(g => g.TurnierId); // Fremdschlüssel in Gruppe, um das Turnier zuzuordnen
 
+
+
+        modelBuilder.Entity<TurnierTeilnehmer>()
+            .HasOne(tt => tt.Turnier)
+            .WithMany(t => t.TurnierTeilnehmerListe)
+            .HasForeignKey(tt => tt.TurnierId);
+
+        modelBuilder.Entity<TurnierTeilnehmer>()
+        .HasOne(tn => tn.Teilnehmer)
+        .WithMany(t => t.TurnierTeilnehmerListe)
+        .HasForeignKey(tn => tn.TurnierId);
+
         modelBuilder.Entity<Gruppe>()
-            .HasMany(g => g.TeilnehmerListe)
-            .WithOne(t => t.Gruppe)
-            .HasForeignKey(t => t.GruppeId);
+        .HasMany(g => g.TurnierTeilnehmerListe)
+        .WithOne(t => t.Gruppe)
+        .HasForeignKey(t => t.GruppeId);
 
         modelBuilder.Entity<Teilnehmer>()
             .HasOne(tn => tn.Bereich)
             .WithMany(b => b.TeilnehmerListe)
             .HasForeignKey(tn => tn.BereichId);
+
+        modelBuilder.Entity<Teilnehmer>()
+        .HasOne(tn => tn.Rolle)
+        .WithMany(b => b.TeilnehmerListe)
+        .HasForeignKey(tn => tn.RolleId);
+
 
         modelBuilder.Entity<Runde>()
             .HasOne(r => r.Turnier)
@@ -70,10 +92,7 @@ public class TurnierContext : DbContext
             .WithMany(tn => tn.SpielTeilnehmerListe)
             .HasForeignKey(st => st.TeilnehmerId);
 
-        modelBuilder.Entity<Teilnehmer>()
-            .HasOne(tn => tn.Rolle)
-            .WithMany(b => b.TeilnehmerListe)
-            .HasForeignKey(tn => tn.RoleId);
+
 
     }
 }
