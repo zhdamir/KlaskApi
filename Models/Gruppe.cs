@@ -13,5 +13,5 @@ public class Gruppe
     [Required]
     public long TurnierId { get; set; }
     public Turnier Turnier { get; set; }
-    public List<TurnierTeilnehmer> TurnierTeilnehmerListe { get; set; }
+    /*public List<TurnierTeilnehmer> TurnierTeilnehmerListe { get; set; }*/
 }

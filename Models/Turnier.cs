@@ -7,8 +7,8 @@ public class Turnier
     public DateTime StartDatum { get; set; }
     public DateTime EndDatum { get; set; }
     public long AnazhlGruppen { get; set; }
-    public List<Gruppe> Gruppen { get; set; } = new List<Gruppe>();
-    public List<Runde> Runden { get; set; } = new List<Runde>();
-    public List<TurnierTeilnehmer> TurnierTeilnehmerListe { get; set; }
+    //public List<Gruppe> Gruppen { get; set; } = new List<Gruppe>();
+    //public List<Runde> Runden { get; set; } = new List<Runde>();
+    /*public List<TurnierTeilnehmer> TurnierTeilnehmerListe { get; set; }*/
 
 }

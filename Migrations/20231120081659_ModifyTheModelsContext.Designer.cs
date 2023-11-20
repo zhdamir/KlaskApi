@@ -3,6 +3,7 @@ using System;
 using KlaskApi.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace KlaskApi.Migrations
 {
     [DbContext(typeof(TurnierContext))]
-    partial class TurnierContextModelSnapshot : ModelSnapshot
+    [Migration("20231120081659_ModifyTheModelsContext")]
+    partial class ModifyTheModelsContext
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -293,17 +296,21 @@ namespace KlaskApi.Migrations
 
             modelBuilder.Entity("KlaskApi.Models.Teilnehmer", b =>
                 {
-                    b.HasOne("KlaskApi.Models.Bereich", null)
+                    b.HasOne("KlaskApi.Models.Bereich", "Bereich")
                         .WithMany()
                         .HasForeignKey("BereichId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("KlaskApi.Models.BenutzerRolle", null)
+                    b.HasOne("KlaskApi.Models.BenutzerRolle", "Rolle")
                         .WithMany()
                         .HasForeignKey("RolleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Bereich");
+
+                    b.Navigation("Rolle");
                 });
 
             modelBuilder.Entity("KlaskApi.Models.TurnierTeilnehmer", b =>

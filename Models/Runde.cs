@@ -15,6 +15,6 @@ public class Runde
     [Required]
     public long TurnierId { get; set; }
     public Turnier Turnier { get; set; }
-    public List<Spiel> SpieleListe { get; set; }
+    /*public List<Spiel> SpieleListe { get; set; }*/
 }
 

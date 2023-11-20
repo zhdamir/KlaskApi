@@ -14,18 +14,19 @@ public class Teilnehmer
     public String Email { get; set; }
 
 
+
     public long BereichId { get; set; }
-    [ForeignKey("BereichId")]
-    public Bereich Bereich { get; set; }
+    /*[ForeignKey("BereichId")]
+    public Bereich Bereich { get; set; }*/
 
 
     public long RolleId { get; set; }
-    [ForeignKey("RolleId")]
-    public BenutzerRolle Rolle { get; set; }
+    /*[ForeignKey("RolleId")]
+    public BenutzerRolle Rolle { get; set; }*/
 
 
-    public List<SpielTeilnehmer> SpielTeilnehmerListe { get; set; }
-    public List<TurnierTeilnehmer> TurnierTeilnehmerListe { get; set; }
+    //public List<SpielTeilnehmer> SpielTeilnehmerListe { get; set; }
+    //public List<TurnierTeilnehmer> TurnierTeilnehmerListe { get; set; }
 
 
 }

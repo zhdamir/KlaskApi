@@ -10,7 +10,7 @@ public class BenutzerRolle
     public long RolleId { get; set; }
     public String BezeichnungRolle { get; set; }
 
-    public List<Teilnehmer> TeilnehmerListe { get; set; }
+    /*public List<Teilnehmer> TeilnehmerListe { get; set; }*/
 
 
 }

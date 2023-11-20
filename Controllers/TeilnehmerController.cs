@@ -24,10 +24,10 @@ namespace KlaskApi.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Teilnehmer>>> GetTeilnehmer()
         {
-          if (_context.Teilnehmer == null)
-          {
-              return NotFound();
-          }
+            if (_context.Teilnehmer == null)
+            {
+                return NotFound();
+            }
             return await _context.Teilnehmer.ToListAsync();
         }
 
@@ -35,10 +35,10 @@ namespace KlaskApi.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<Teilnehmer>> GetTeilnehmer(long id)
         {
-          if (_context.Teilnehmer == null)
-          {
-              return NotFound();
-          }
+            if (_context.Teilnehmer == null)
+            {
+                return NotFound();
+            }
             var teilnehmer = await _context.Teilnehmer.FindAsync(id);
 
             if (teilnehmer == null)
@@ -83,12 +83,12 @@ namespace KlaskApi.Controllers
         // POST: api/Teilnehmer
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Teilnehmer>> PostTeilnehmer(Teilnehmer teilnehmer)
+        public async Task<ActionResult<Teilnehmer>> PostTeilnehmer([FromBody] Teilnehmer teilnehmer)
         {
-          if (_context.Teilnehmer == null)
-          {
-              return Problem("Entity set 'TurnierContext.Teilnehmer'  is null.");
-          }
+            if (_context.Teilnehmer == null)
+            {
+                return Problem("Entity set 'TurnierContext.Teilnehmer'  is null.");
+            }
             _context.Teilnehmer.Add(teilnehmer);
             await _context.SaveChangesAsync();
 
