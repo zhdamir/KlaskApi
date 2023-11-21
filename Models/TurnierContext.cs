@@ -89,6 +89,11 @@ public class TurnierContext : DbContext
         .HasForeignKey(tn => tn.RolleId)
         .IsRequired();
 
+        modelBuilder.Entity<LoginDaten>()
+        .HasOne<Teilnehmer>()
+        .WithOne()
+        .HasForeignKey<LoginDaten>(ld => ld.TeilnehmerId);
+
         modelBuilder.Entity<Runde>()
             .HasOne(r => r.Turnier)
             .WithMany()
@@ -109,4 +114,7 @@ public class TurnierContext : DbContext
             .WithMany()
             .HasForeignKey(st => st.TeilnehmerId);
     }
+
+
+    public DbSet<KlaskApi.Models.LoginDaten> LoginDaten { get; set; } = default!;
 }
