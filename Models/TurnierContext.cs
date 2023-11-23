@@ -10,6 +10,7 @@ public class TurnierContext : DbContext
     public TurnierContext(DbContextOptions<TurnierContext> options)
         : base(options)
     {
+        AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
     }
 
     public DbSet<Turnier> Turniere { get; set; }
@@ -22,6 +23,7 @@ public class TurnierContext : DbContext
     public DbSet<SpielTeilnehmer> SpieleTeilnehmer { get; set; }
     public DbSet<BenutzerRolle> BenutzerRollen { get; set; }
     public DbSet<TurnierTeilnehmer> TurniereTeilnehmer { get; set; }
+    public DbSet<LoginDaten> LoginDaten { get; set; }
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -36,85 +38,75 @@ public class TurnierContext : DbContext
         modelBuilder.Entity<SpielTeilnehmer>().ToTable("SpieleTeilnehmer");
         modelBuilder.Entity<BenutzerRolle>().ToTable("BenutzerRolle");
         modelBuilder.Entity<TurnierTeilnehmer>().ToTable("TurnierTeilnehmer");
+        modelBuilder.Entity<LoginDaten>().ToTable("LoginDaten");
 
-        /*Turnier Beziwhungen*/
-        // Hier definierst du die Beziehung zwischen Turnieren und Gruppen
-        modelBuilder.Entity<Gruppe>()
-            .HasOne(g => g.Turnier)   // Jede Gruppe gehört zu einem Turnier
-            .WithMany()  // Ein Turnier kann viele Gruppen haben
-            .HasForeignKey(g => g.TurnierId); // Fremdschlüssel in Gruppe, um das Turnier zuzuordnen
 
-        modelBuilder.Entity<TurnierTeilnehmer>()
-            .HasOne(tt => tt.Turnier)
-            .WithMany()
-            .HasForeignKey(tt => tt.TurnierId);
-
-        modelBuilder.Entity<TurnierTeilnehmer>()
-        .HasOne(tn => tn.Teilnehmer)
-        .WithMany()
-        .HasForeignKey(tn => tn.TurnierId);
-
-        /*modelBuilder.Entity<Gruppe>()
-        .HasMany(g => g.TurnierTeilnehmerListe)
-        .WithOne(t => t.Gruppe)
-        .HasForeignKey(t => t.GruppeId);*/
-
-        //The above replaced with this:
-        modelBuilder.Entity<TurnierTeilnehmer>()
-        .HasOne(g => g.Gruppe)
-        .WithMany()
-        .HasForeignKey(g => g.GruppeId);
-
-        /*modelBuilder.Entity<Teilnehmer>()
-            .HasOne(tn => tn.Bereich)
-            .WithMany()
-            .HasForeignKey(tn => tn.BereichId);*/
-
-        //The above is replaced with this: ONE TO MANY WITH NO NAVIGATIONS
         modelBuilder.Entity<Bereich>()
         .HasMany<Teilnehmer>()
         .WithOne()
         .HasForeignKey(tn => tn.BereichId)
         .IsRequired();
 
-        /*modelBuilder.Entity<Teilnehmer>()
-        .HasOne(tn => tn.Rolle)
-        .WithMany()
-        .HasForeignKey(tn => tn.RolleId);*/
 
-        //The above is replaced with this: ONE TO MANY WITH NO NAVIGATIONS
         modelBuilder.Entity<BenutzerRolle>()
         .HasMany<Teilnehmer>()
         .WithOne()
         .HasForeignKey(tn => tn.RolleId)
         .IsRequired();
 
+        modelBuilder.Entity<Turnier>()
+        .HasMany<TurnierTeilnehmer>()
+        .WithOne()
+        .HasForeignKey(tt => tt.TurnierId)
+        .IsRequired();
+
+        modelBuilder.Entity<Teilnehmer>()
+        .HasMany<TurnierTeilnehmer>()
+        .WithOne()
+        .HasForeignKey(tt => tt.TeilnehmerId)
+        .IsRequired();
+
+        modelBuilder.Entity<Turnier>()
+        .HasMany<Gruppe>()
+        .WithOne()
+        .HasForeignKey(g => g.TurnierId)
+        .IsRequired();
+
+        modelBuilder.Entity<Gruppe>()
+        .HasMany<TurnierTeilnehmer>()
+        .WithOne()
+        .HasForeignKey(tt => tt.GruppeId)
+        .IsRequired();
+
         modelBuilder.Entity<LoginDaten>()
         .HasOne<Teilnehmer>()
         .WithOne()
-        .HasForeignKey<LoginDaten>(ld => ld.TeilnehmerId);
+        .HasForeignKey<LoginDaten>(ld => ld.TeilnehmerId)
+        .IsRequired();
+
+        modelBuilder.Entity<Turnier>()
+        .HasMany<Runde>()
+        .WithOne()
+        .HasForeignKey(r => r.TurnierId)
+        .IsRequired();
 
         modelBuilder.Entity<Runde>()
-            .HasOne(r => r.Turnier)
-            .WithMany()
-            .HasForeignKey(r => r.TurnierId);
+        .HasMany<Spiel>()
+        .WithOne()
+        .HasForeignKey(s => s.RundeId)
+        .IsRequired();
 
         modelBuilder.Entity<Spiel>()
-            .HasOne(s => s.Runde)
-            .WithMany()
-            .HasForeignKey(s => s.RundeId);
+        .HasMany<SpielTeilnehmer>()
+        .WithOne()
+        .HasForeignKey(st => st.SpielId)
+        .IsRequired();
 
-        modelBuilder.Entity<SpielTeilnehmer>()
-            .HasOne(st => st.Spiel)
-            .WithMany()
-            .HasForeignKey(st => st.SpielId);
-
-        modelBuilder.Entity<SpielTeilnehmer>()
-            .HasOne(st => st.Teilnehmer)
-            .WithMany()
-            .HasForeignKey(st => st.TeilnehmerId);
+        modelBuilder.Entity<Teilnehmer>()
+        .HasMany<SpielTeilnehmer>()
+        .WithOne()
+        .HasForeignKey(st => st.TeilnehmerId)
+        .IsRequired();
     }
 
-
-    public DbSet<KlaskApi.Models.LoginDaten> LoginDaten { get; set; } = default!;
 }

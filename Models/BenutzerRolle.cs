@@ -6,5 +6,5 @@ public class BenutzerRolle
 {
     [Key]
     public long RolleId { get; set; }
-    public String BezeichnungRolle { get; set; }
+    public String? BezeichnungRolle { get; set; }
 }

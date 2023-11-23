@@ -3,6 +3,7 @@ using System;
 using KlaskApi.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace KlaskApi.Migrations
 {
     [DbContext(typeof(TurnierContext))]
-    partial class TurnierContextModelSnapshot : ModelSnapshot
+    [Migration("20231122221538_DeleteNavProps")]
+    partial class DeleteNavProps
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -205,7 +208,7 @@ namespace KlaskApi.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
-                    b.Property<long>("AnzahlGruppen")
+                    b.Property<long>("AnazhlGruppen")
                         .HasColumnType("bigint");
 
                     b.Property<DateTime>("EndDatum")

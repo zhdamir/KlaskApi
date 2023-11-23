@@ -11,34 +11,34 @@ namespace KlaskApi.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class GruppenController : ControllerBase
+    public class GruppeController : ControllerBase
     {
         private readonly TurnierContext _context;
 
-        public GruppenController(TurnierContext context)
+        public GruppeController(TurnierContext context)
         {
             _context = context;
         }
 
-        // GET: api/Gruppen
+        // GET: api/Gruppe
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Gruppe>>> GetGruppen()
         {
-            if (_context.Gruppen == null)
-            {
-                return NotFound();
-            }
+          if (_context.Gruppen == null)
+          {
+              return NotFound();
+          }
             return await _context.Gruppen.ToListAsync();
         }
 
-        // GET: api/Gruppen/5
+        // GET: api/Gruppe/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Gruppe>> GetGruppe(long id)
         {
-            if (_context.Gruppen == null)
-            {
-                return NotFound();
-            }
+          if (_context.Gruppen == null)
+          {
+              return NotFound();
+          }
             var gruppe = await _context.Gruppen.FindAsync(id);
 
             if (gruppe == null)
@@ -49,7 +49,7 @@ namespace KlaskApi.Controllers
             return gruppe;
         }
 
-        // PUT: api/Gruppen/5
+        // PUT: api/Gruppe/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
         public async Task<IActionResult> PutGruppe(long id, Gruppe gruppe)
@@ -80,25 +80,22 @@ namespace KlaskApi.Controllers
             return NoContent();
         }
 
-        // POST: api/Gruppen
+        // POST: api/Gruppe
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         public async Task<ActionResult<Gruppe>> PostGruppe(Gruppe gruppe)
         {
-
-            gruppe.Turnier.StartDatum = gruppe.Turnier.StartDatum.ToUniversalTime();
-            gruppe.Turnier.EndDatum = gruppe.Turnier.EndDatum.ToUniversalTime();
-            if (_context.Gruppen == null)
-            {
-                return Problem("Entity set 'TurnierContext.Gruppen'  is null.");
-            }
+          if (_context.Gruppen == null)
+          {
+              return Problem("Entity set 'TurnierContext.Gruppen'  is null.");
+          }
             _context.Gruppen.Add(gruppe);
             await _context.SaveChangesAsync();
 
             return CreatedAtAction("GetGruppe", new { id = gruppe.GruppeId }, gruppe);
         }
 
-        // DELETE: api/Gruppen/5
+        // DELETE: api/Gruppe/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteGruppe(long id)
         {

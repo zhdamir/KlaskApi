@@ -9,10 +9,5 @@ public class Spiel
     public long SpielId { get; set; }
 
     public long RundeId { get; set; }
-    [ForeignKey("RundeId")]
-    public Runde Runde { get; set; }
-
-    public List<SpielTeilnehmer> SpielTeilnehmerListe { get; set; }
-
 
 }

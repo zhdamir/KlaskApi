@@ -59,6 +59,10 @@ namespace KlaskApi.Controllers
                 return BadRequest();
             }
 
+            // Convert DateTime values to UTC
+            turnier.StartDatum = turnier.StartDatum.ToUniversalTime();
+            turnier.EndDatum = turnier.EndDatum.ToUniversalTime();
+
             _context.Entry(turnier).State = EntityState.Modified;
 
             try
@@ -89,10 +93,15 @@ namespace KlaskApi.Controllers
             {
                 return Problem("Entity set 'TurnierContext.Turniere'  is null.");
             }
+
+            // Convert DateTime values to UTC
+            turnier.StartDatum = turnier.StartDatum.ToUniversalTime();
+            turnier.EndDatum = turnier.EndDatum.ToUniversalTime();
+
             _context.Turniere.Add(turnier);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetTurnier), new { id = turnier.Id }, turnier);
+            return CreatedAtAction("GetTurnier", new { id = turnier.Id }, turnier);
         }
 
         // DELETE: api/Turnier/5
