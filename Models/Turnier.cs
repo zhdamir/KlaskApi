@@ -10,6 +10,7 @@ public class Turnier
     public DateTime StartDatum { get; set; }
     public DateTime EndDatum { get; set; }
     public long AnzahlGruppen { get; set; }
+    public bool IsActive { get; set; }
 
 
 }
