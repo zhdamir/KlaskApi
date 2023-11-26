@@ -75,8 +75,8 @@ public class TurnierContext : DbContext
         modelBuilder.Entity<Gruppe>()
         .HasMany<TurnierTeilnehmer>()
         .WithOne()
-        .HasForeignKey(tt => tt.GruppeId)
-        .IsRequired();
+        .HasForeignKey(tt => tt.GruppeId);
+
 
         modelBuilder.Entity<LoginDaten>()
         .HasOne<Teilnehmer>()

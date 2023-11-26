@@ -3,6 +3,7 @@ using System;
 using KlaskApi.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace KlaskApi.Migrations
 {
     [DbContext(typeof(TurnierContext))]
-    partial class TurnierContextModelSnapshot : ModelSnapshot
+    [Migration("20231123083544_TurnierTeilnehmerUndGruppeIdIsRequieredRemoved")]
+    partial class TurnierTeilnehmerUndGruppeIdIsRequieredRemoved
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -230,7 +233,7 @@ namespace KlaskApi.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("TurnierTeilnehmerId"));
 
-                    b.Property<long?>("GruppeId")
+                    b.Property<long>("GruppeId")
                         .HasColumnType("bigint");
 
                     b.Property<long>("TeilnehmerId")
@@ -320,7 +323,9 @@ namespace KlaskApi.Migrations
                 {
                     b.HasOne("KlaskApi.Models.Gruppe", null)
                         .WithMany()
-                        .HasForeignKey("GruppeId");
+                        .HasForeignKey("GruppeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("KlaskApi.Models.Teilnehmer", null)
                         .WithMany()

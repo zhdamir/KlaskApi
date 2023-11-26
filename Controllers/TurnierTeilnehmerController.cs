@@ -24,10 +24,10 @@ namespace KlaskApi.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<TurnierTeilnehmer>>> GetTurniereTeilnehmer()
         {
-          if (_context.TurniereTeilnehmer == null)
-          {
-              return NotFound();
-          }
+            if (_context.TurniereTeilnehmer == null)
+            {
+                return NotFound();
+            }
             return await _context.TurniereTeilnehmer.ToListAsync();
         }
 
@@ -35,10 +35,10 @@ namespace KlaskApi.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<TurnierTeilnehmer>> GetTurnierTeilnehmer(long id)
         {
-          if (_context.TurniereTeilnehmer == null)
-          {
-              return NotFound();
-          }
+            if (_context.TurniereTeilnehmer == null)
+            {
+                return NotFound();
+            }
             var turnierTeilnehmer = await _context.TurniereTeilnehmer.FindAsync(id);
 
             if (turnierTeilnehmer == null)
@@ -85,15 +85,44 @@ namespace KlaskApi.Controllers
         [HttpPost]
         public async Task<ActionResult<TurnierTeilnehmer>> PostTurnierTeilnehmer(TurnierTeilnehmer turnierTeilnehmer)
         {
-          if (_context.TurniereTeilnehmer == null)
-          {
-              return Problem("Entity set 'TurnierContext.TurniereTeilnehmer'  is null.");
-          }
+            if (_context.TurniereTeilnehmer == null)
+            {
+                return Problem("Entity set 'TurnierContext.TurniereTeilnehmer'  is null.");
+            }
             _context.TurniereTeilnehmer.Add(turnierTeilnehmer);
             await _context.SaveChangesAsync();
 
             return CreatedAtAction("GetTurnierTeilnehmer", new { id = turnierTeilnehmer.TurnierTeilnehmerId }, turnierTeilnehmer);
         }
+
+        /*[HttpPost]
+        public async Task<ActionResult<IEnumerable<TurnierTeilnehmer>>> PostTurnierTeilnehmer(long turnierId, List<long> teilnehmerIds)
+        {
+            try
+            {
+                foreach (var teilnehmerId in teilnehmerIds)
+                {
+                    var turnierTeilnehmer = new TurnierTeilnehmer
+                    {
+                        TurnierId = turnierId,
+                        TeilnehmerId = teilnehmerId,
+                        // Other properties if needed
+                    };
+
+                    _context.TurniereTeilnehmer.Add(turnierTeilnehmer);
+                }
+
+                await _context.SaveChangesAsync();
+
+                return Ok();
+            }
+            catch (Exception ex)
+            {
+                // Handle exceptions appropriately
+                return StatusCode(500, $"Internal Server Error: {ex.Message}");
+            }
+        }*/
+
 
         // DELETE: api/TurnierTeilnehmer/5
         [HttpDelete("{id}")]
