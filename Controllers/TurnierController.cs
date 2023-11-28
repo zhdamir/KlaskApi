@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using KlaskApi.Models;
+using KlaskApi.Services;
 
 namespace KlaskApi.Controllers
 {
@@ -19,6 +20,41 @@ namespace KlaskApi.Controllers
         {
             _context = context;
         }
+
+
+        /*This Endpoint is responsible for staring the Turnier*/
+        [HttpPost("startTurnier")]
+        //[Route("start")]
+        public async Task<IActionResult> StartTurnier([FromQuery] long turnierId)
+        {
+            if (turnierId <= 0)
+            {
+                // Log or return a more specific error response for an invalid turnierId
+                return BadRequest("Invalid turnierId. TurnierId must be greater than 0.");
+            }
+
+            try
+            {
+                var groupingService = new TeilnehmerGroupingService(_context);
+                var createdGroups = await groupingService.GroupTeilnehmer(turnierId);
+
+                if (createdGroups == null)
+                {
+                    // Handle the case where grouping failed
+                    return BadRequest("Grouping failed. Check your data.");
+                }
+
+                // Return success response or createdGroups if needed
+                return Ok(createdGroups);
+            }
+            catch (Exception ex)
+            {
+                // Handle exceptions appropriately
+                Console.WriteLine($"Error in StartTurnier: {ex.Message}");
+                return StatusCode(500, $"Internal Server Error: {ex.Message}");
+            }
+        }
+
 
         // GET: api/Turnier
         [HttpGet]
@@ -50,7 +86,6 @@ namespace KlaskApi.Controllers
         }
 
         // PUT: api/Turnier/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
         public async Task<IActionResult> PutTurnier(long id, Turnier turnier)
         {

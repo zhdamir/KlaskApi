@@ -5,6 +5,15 @@ using KlaskApi.Models;
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 var builder = WebApplication.CreateBuilder(args);
 
+// Add logging configuration
+/*builder.Host.ConfigureLogging(logging =>
+{
+    logging.AddConsole(); // Add console logging=> to be able zto see console logs (Console.WriteLine)
+});*/
+
+// Use builder.Logging instead of ConfigureLogging
+builder.Logging.AddConsole();
+
 //for CORS
 builder.Services.AddCors(options =>
 {
@@ -40,7 +49,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+app.UseHttpsRedirection(); //commented out for now=> beacuse of =>Microsoft.AspNetCore.HttpsPolicy.HttpsRedirectionMiddleware[3]
+//Failed to determine the https port for redirect.=> while working on "Turnier starten"
 
 app.UseStaticFiles();
 app.UseRouting();
