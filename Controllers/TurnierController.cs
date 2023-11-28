@@ -21,6 +21,59 @@ namespace KlaskApi.Controllers
             _context = context;
         }
 
+        [HttpGet("currentTurnierDetails")]
+        public async Task<ActionResult<object>> CurrentTurnierDetails()
+        {
+            try
+            {
+                // Get the active turnier
+                var activeTurnier = await _context.Turniere.FirstOrDefaultAsync(t => t.IsActive);
+
+                if (activeTurnier == null)
+                {
+                    return NotFound("No active turnier found.");
+                }
+
+                // Get groups and participants for the active turnier
+                var turnierDetails = await _context.Gruppen
+                    .Join(_context.TurniereTeilnehmer,
+                        g => g.GruppeId,
+                        tt => tt.GruppeId,
+                        (g, tt) => new { Gruppe = g, TurnierTeilnehmer = tt })
+                    .Join(_context.Teilnehmer,
+                        j => j.TurnierTeilnehmer.TeilnehmerId,
+                        t => t.TeilnehmerId,
+                        (j, t) => new { j.Gruppe, j.TurnierTeilnehmer, Teilnehmer = t })
+                    .Where(j => j.Gruppe.TurnierId == activeTurnier.Id)
+                    .Select(j => new
+                    {
+                        GruppeId = j.Gruppe.GruppeId,
+                        Gruppenname = j.Gruppe.Gruppenname,
+                        Teilnehmer = new
+                        {
+                            TeilnehmerId = j.Teilnehmer.TeilnehmerId,
+                            Vorname = j.Teilnehmer.Vorname,
+                            // Add other properties as needed
+                        }
+                    })
+                    .GroupBy(j => new { j.GruppeId, j.Gruppenname })
+                    .Select(g => new
+                    {
+                        GruppeId = g.Key.GruppeId,
+                        Gruppenname = g.Key.Gruppenname,
+                        Teilnehmer = g.Select(j => j.Teilnehmer).ToList()
+                    })
+                    .ToListAsync();
+
+                return turnierDetails;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in GetCurrentTurnierDetails: {ex.Message}");
+                return StatusCode(500, $"Internal Server Error: {ex.Message}");
+            }
+        }
+
 
         /*This Endpoint is responsible for staring the Turnier*/
         [HttpPost("startTurnier")]
