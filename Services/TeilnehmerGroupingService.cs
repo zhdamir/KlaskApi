@@ -49,6 +49,33 @@ namespace KlaskApi.Services
                     return null;
                 }
 
+                //Create Gruppenvorrunde
+                var createdGruppenRunde = GenerateGruppenRunde(turnierId);
+                if (createdGruppenRunde == null)
+                {
+                    Console.WriteLine($"Error creating Gruppen Vorrunde for TurnierId: {turnierId}");
+                    return null;
+                }
+                await _context.SaveChangesAsync();
+
+
+                //Create Spiele für Gruppenrunde
+                var rundeId = createdGruppenRunde.RundeId;
+                var createdGruppenSpiele = GenerateGruppenRundeSpiele(rundeId, turnierTeilnehmerList);
+                if (createdGruppenSpiele == null)
+                {
+                    Console.WriteLine($"Error creating Gruppen Spiele for RundeId: {rundeId}");
+                    return null;
+                }
+                await _context.SaveChangesAsync();
+
+                var createdSpielTeilnehmer = GenerateSpielTeilnehmer(rundeId, turnierTeilnehmerList, createdGruppenSpiele);
+                if (createdSpielTeilnehmer == null)
+                {
+                    Console.WriteLine($"Error creating SpieleTeilnehmer for RundeId: {rundeId}");
+                    return null;
+                }
+
                 await _context.SaveChangesAsync();
                 Console.WriteLine("Groups created and assigned successfully");
                 return createdGroups;
@@ -60,6 +87,106 @@ namespace KlaskApi.Services
             }
         }
 
+        private List<SpielTeilnehmer> GenerateSpielTeilnehmer(long rundeId, List<TurnierTeilnehmer> teilnehmerList, List<Spiel> spieleList)
+        {
+            var spieleTeilnehmerList = new List<SpielTeilnehmer>();
+            // Generate unique SpielIds for the current group
+            var uniqueSpielIds = spieleList.Where(s => s.RundeId == rundeId).Select(s => s.SpielId).Distinct().ToList();
+            // Logic to generate Spiele based on Teilnehmer in each group
+            // Assuming each Teilnehmer in a group plays with all other Teilnehmer in the same group
+            foreach (var gruppeId in teilnehmerList.Select(tt => tt.GruppeId).Distinct())
+            {
+                var gruppeTeilnehmer = teilnehmerList.Where(tt => tt.GruppeId == gruppeId).ToList();
+                for (int i = 0; i < gruppeTeilnehmer.Count - 1; i++)
+                {
+
+                    for (int j = i + 1; j < gruppeTeilnehmer.Count; j++)
+                    {
+
+                        // Pick the next unique SpielId for the current group
+                        var spielId = uniqueSpielIds.FirstOrDefault();
+
+                        if (spielId != 0) // Check if there's a valid SpielId
+                        {
+                            // Create SpielTeilnehmer entities for the pair
+                            var spielTeilnehmer1 = new SpielTeilnehmer
+                            {
+                                SpielId = spielId,
+                                TeilnehmerId = gruppeTeilnehmer[i].TeilnehmerId,
+                                Punkte = 0, // You can set initial points here
+                            };
+
+                            var spielTeilnehmer2 = new SpielTeilnehmer
+                            {
+                                SpielId = spielId,
+                                TeilnehmerId = gruppeTeilnehmer[j].TeilnehmerId,
+                                Punkte = 0, // You can set initial points here
+                            };
+
+                            // Add the SpielTeilnehmer entities to the list
+                            spieleTeilnehmerList.Add(spielTeilnehmer1);
+                            spieleTeilnehmerList.Add(spielTeilnehmer2);
+
+                            // Remove the used SpielId from the list
+                            uniqueSpielIds.Remove(spielId);
+
+                            // Add SpielTeilnehmer entities to the context
+                            _context.SpieleTeilnehmer.Add(spielTeilnehmer1);
+                            _context.SpieleTeilnehmer.Add(spielTeilnehmer2);
+                        }
+                    }
+                }
+            }
+
+            return spieleTeilnehmerList;
+        }
+
+        private List<Spiel> GenerateGruppenRundeSpiele(long rundeId, List<TurnierTeilnehmer> teilnehmerList)
+        {
+
+            var spieleList = new List<Spiel>();
+
+            // Logic to generate Spiele based on Teilnehmer in each group
+            // Assuming each Teilnehmer in a group plays with all other Teilnehmer in the same group
+            foreach (var gruppeId in teilnehmerList.Select(tt => tt.GruppeId).Distinct())
+            {
+                var gruppeTeilnehmer = teilnehmerList.Where(tt => tt.GruppeId == gruppeId).ToList();
+
+                for (int i = 0; i < gruppeTeilnehmer.Count - 1; i++)
+                {
+                    for (int j = i + 1; j < gruppeTeilnehmer.Count; j++)
+                    {
+                        // Create a Spiel for each pair of Teilnehmer in the group
+                        var spiel = new Spiel
+                        {
+                            RundeId = rundeId,
+
+                        };
+                        spieleList.Add(spiel);
+                        _context.Spiele.Add(spiel);
+
+                    }
+                }
+            }
+
+
+
+            return spieleList;
+        }
+
+        //Method to create Gruppenvorrunde
+        private Runde GenerateGruppenRunde(long turnierId)
+        {
+            var gruppenRunde = new Runde
+            {
+                RundeBezeichnung = "Gruppenvorrunde ",
+                TurnierId = turnierId,
+            };
+            _context.Runden.Add(gruppenRunde);
+            return gruppenRunde;
+        }
+
+        //private List<SpielTeilnehmer> GenerateGruppenrundeGames()
         private List<Gruppe> GenerateAndAssignGroups(int numberOfGroups, List<TurnierTeilnehmer> teilnehmerList)
         {
             var groups = new List<Gruppe>();

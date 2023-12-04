@@ -12,5 +12,5 @@ public class SpielTeilnehmer
 
     public long TeilnehmerId { get; set; }
 
-    public long Punkte { get; set; }
+    public long? Punkte { get; set; }
 }
