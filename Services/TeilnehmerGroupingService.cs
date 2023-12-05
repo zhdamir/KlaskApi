@@ -113,14 +113,14 @@ namespace KlaskApi.Services
                             {
                                 SpielId = spielId,
                                 TeilnehmerId = gruppeTeilnehmer[i].TeilnehmerId,
-                                Punkte = 0, // You can set initial points here
+                                Punkte = null,
                             };
 
                             var spielTeilnehmer2 = new SpielTeilnehmer
                             {
                                 SpielId = spielId,
                                 TeilnehmerId = gruppeTeilnehmer[j].TeilnehmerId,
-                                Punkte = 0, // You can set initial points here
+                                Punkte = null,
                             };
 
                             // Add the SpielTeilnehmer entities to the list

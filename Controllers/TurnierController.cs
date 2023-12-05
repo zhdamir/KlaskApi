@@ -21,6 +21,70 @@ namespace KlaskApi.Controllers
             _context = context;
         }
 
+        [HttpGet("gruppenrundenDetails")]
+        public async Task<ActionResult<object>> GruppenrundenDetails()
+        {
+            try
+            {
+                // Get the active turnier
+                var activeTurnier = await _context.Turniere.FirstOrDefaultAsync(t => t.IsActive);
+
+                if (activeTurnier == null)
+                {
+                    return NotFound("No active turnier found.");
+                }
+
+                // Get groups, participants, and games for the active turnier
+                var turnierDetails = await _context.SpieleTeilnehmer
+                    .Join(_context.Spiele,
+                        st => st.SpielId,
+                        s => s.SpielId,
+                        (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
+                    .Join(_context.Teilnehmer,
+                        j => j.SpieleTeilnehmer.TeilnehmerId,
+                        tn => tn.TeilnehmerId,
+                        (j, tn) => new { j.SpieleTeilnehmer, j.Spiel, Teilnehmer = tn })
+                    .Join(_context.TurniereTeilnehmer,
+                        j => j.Teilnehmer.TeilnehmerId,
+                        tt => tt.TeilnehmerId,
+                        (j, tt) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, TurnierTeilnehmer = tt })
+                    .Join(_context.Gruppen,
+                        j => j.TurnierTeilnehmer.GruppeId,
+                        g => g.GruppeId,
+                        (j, g) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, Gruppe = g })
+                    .Join(_context.Runden,
+                        j => j.Spiel.RundeId,
+                        r => r.RundeId,
+                        (j, r) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, j.Gruppe, Runde = r })
+                    .Join(_context.Turniere,
+                        j => j.Runde.TurnierId,
+                        t => t.Id,
+                        (j, t) => new
+                        {
+                            TeilnehmerId = j.Teilnehmer.TeilnehmerId,
+                            Vorname = j.Teilnehmer.Vorname,
+                            SpielTeilnehmerId = j.SpieleTeilnehmer.SpielTeilnehmerId,
+                            Punkte = j.SpieleTeilnehmer.Punkte,
+                            GruppeId = j.Gruppe.GruppeId,
+                            Gruppenname = j.Gruppe.Gruppenname,
+                            RundeId = j.Runde.RundeId,
+                            RundeBezeichnung = j.Runde.RundeBezeichnung,
+                            TurnierTitel = t.TurnierTitel,
+                            SpielId = j.Spiel.SpielId
+                        })
+                    .ToListAsync();
+
+                return turnierDetails;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in CurrentTurnierDetails: {ex.Message}");
+                return StatusCode(500, $"Internal Server Error: {ex.Message}");
+            }
+        }
+
+
+
         [HttpGet("currentTurnierDetails")]
         public async Task<ActionResult<object>> CurrentTurnierDetails()
         {
@@ -73,6 +137,7 @@ namespace KlaskApi.Controllers
                 return StatusCode(500, $"Internal Server Error: {ex.Message}");
             }
         }
+
 
 
         /*This Endpoint is responsible for staring the Turnier*/
