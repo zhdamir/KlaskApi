@@ -20,14 +20,48 @@ namespace KlaskApi.Controllers
             _context = context;
         }
 
+        // POST: api/Turnier/UpdatePunkte/5
+        [HttpPost("UpdatePunkte/{spielTeilnehmerId}")]
+        public async Task<IActionResult> UpdatePunkte(long spielTeilnehmerId, [FromBody] int neuePunkte)
+        {
+            try
+            {
+                if (spielTeilnehmerId <= 0)
+                {
+                    return BadRequest("Invalid spielTeilnehmerId. SpielTeilnehmerId must be greater than 0.");
+                }
+
+                var spielTeilnehmer = await _context.SpieleTeilnehmer.FindAsync(spielTeilnehmerId);
+
+                if (spielTeilnehmer == null)
+                {
+                    return NotFound("SpielTeilnehmer not found.");
+                }
+
+                // Update the Punkte
+                spielTeilnehmer.Punkte = neuePunkte;
+
+                // Save changes to the database
+                await _context.SaveChangesAsync();
+
+                // Return success response or updated spielTeilnehmer if needed
+                return Ok(spielTeilnehmer);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in UpdatePunkte: {ex.Message}");
+                return StatusCode(500, $"Internal Server Error: {ex.Message}");
+            }
+        }
+
         // GET: api/SpielTeilnehmer
         [HttpGet]
         public async Task<ActionResult<IEnumerable<SpielTeilnehmer>>> GetSpieleTeilnehmer()
         {
-          if (_context.SpieleTeilnehmer == null)
-          {
-              return NotFound();
-          }
+            if (_context.SpieleTeilnehmer == null)
+            {
+                return NotFound();
+            }
             return await _context.SpieleTeilnehmer.ToListAsync();
         }
 
@@ -35,10 +69,10 @@ namespace KlaskApi.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<SpielTeilnehmer>> GetSpielTeilnehmer(long id)
         {
-          if (_context.SpieleTeilnehmer == null)
-          {
-              return NotFound();
-          }
+            if (_context.SpieleTeilnehmer == null)
+            {
+                return NotFound();
+            }
             var spielTeilnehmer = await _context.SpieleTeilnehmer.FindAsync(id);
 
             if (spielTeilnehmer == null)
@@ -85,10 +119,10 @@ namespace KlaskApi.Controllers
         [HttpPost]
         public async Task<ActionResult<SpielTeilnehmer>> PostSpielTeilnehmer(SpielTeilnehmer spielTeilnehmer)
         {
-          if (_context.SpieleTeilnehmer == null)
-          {
-              return Problem("Entity set 'TurnierContext.SpieleTeilnehmer'  is null.");
-          }
+            if (_context.SpieleTeilnehmer == null)
+            {
+                return Problem("Entity set 'TurnierContext.SpieleTeilnehmer'  is null.");
+            }
             _context.SpieleTeilnehmer.Add(spielTeilnehmer);
             await _context.SaveChangesAsync();
 

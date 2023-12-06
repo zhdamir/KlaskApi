@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using KlaskApi.Models;
+using KlaskApi.Services;
 
 namespace KlaskApi.Controllers
 {
@@ -20,14 +21,48 @@ namespace KlaskApi.Controllers
             _context = context;
         }
 
+        /*staring the Vorrunde*/
+        [HttpPost("startVorrunde")]
+        public async Task<IActionResult> StartVorrunde([FromQuery] long turnierId)
+        {
+            if (turnierId <= 0)
+            {
+                // Log or return a more specific error response for an invalid turnierId
+                return BadRequest("Invalid turnierId. TurnierId must be greater than 0.");
+            }
+
+            try
+            {
+                var groupingService = new TeilnehmerGroupingService(_context);
+                var createdGroups = await groupingService.GroupTeilnehmer(turnierId);
+
+                if (createdGroups == null)
+                {
+                    // Handle the case where grouping failed
+                    return BadRequest("Grouping failed. Check your data.");
+                }
+
+                // Return success response or createdGroups if needed
+                return Ok(createdGroups);
+            }
+            catch (Exception ex)
+            {
+                // Handle exceptions appropriately
+                Console.WriteLine($"Error in StartTurnier: {ex.Message}");
+                return StatusCode(500, $"Internal Server Error: {ex.Message}");
+            }
+        }
+
+
+
         // GET: api/Runde
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Runde>>> GetRunden()
         {
-          if (_context.Runden == null)
-          {
-              return NotFound();
-          }
+            if (_context.Runden == null)
+            {
+                return NotFound();
+            }
             return await _context.Runden.ToListAsync();
         }
 
@@ -35,10 +70,10 @@ namespace KlaskApi.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<Runde>> GetRunde(long id)
         {
-          if (_context.Runden == null)
-          {
-              return NotFound();
-          }
+            if (_context.Runden == null)
+            {
+                return NotFound();
+            }
             var runde = await _context.Runden.FindAsync(id);
 
             if (runde == null)
@@ -85,10 +120,10 @@ namespace KlaskApi.Controllers
         [HttpPost]
         public async Task<ActionResult<Runde>> PostRunde(Runde runde)
         {
-          if (_context.Runden == null)
-          {
-              return Problem("Entity set 'TurnierContext.Runden'  is null.");
-          }
+            if (_context.Runden == null)
+            {
+                return Problem("Entity set 'TurnierContext.Runden'  is null.");
+            }
             _context.Runden.Add(runde);
             await _context.SaveChangesAsync();
 
