@@ -186,7 +186,7 @@ namespace KlaskApi.Services
             return gruppenRunde;
         }
 
-        //private List<SpielTeilnehmer> GenerateGruppenrundeGames()
+
         private List<Gruppe> GenerateAndAssignGroups(int numberOfGroups, List<TurnierTeilnehmer> teilnehmerList)
         {
             var groups = new List<Gruppe>();

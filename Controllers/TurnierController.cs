@@ -34,6 +34,9 @@ namespace KlaskApi.Controllers
                     return NotFound("No active turnier found.");
                 }
 
+
+
+
                 // Get groups, participants, and games for the active turnier
                 var turnierDetails = await _context.SpieleTeilnehmer
                     .Join(_context.Spiele,
@@ -56,6 +59,7 @@ namespace KlaskApi.Controllers
                         j => j.Spiel.RundeId,
                         r => r.RundeId,
                         (j, r) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, j.Gruppe, Runde = r })
+                       .Where(j => j.Runde.RundeBezeichnung.Contains("Gruppenvorrunde"))
                     .Join(_context.Turniere,
                         j => j.Runde.TurnierId,
                         t => t.Id,
@@ -140,7 +144,7 @@ namespace KlaskApi.Controllers
 
 
 
-        /*This Endpoint is responsible for staring the Turnier*/
+        /*staring the Turnier*/
         [HttpPost("startTurnier")]
         //[Route("start")]
         public async Task<IActionResult> StartTurnier([FromQuery] long turnierId)
