@@ -75,6 +75,46 @@ namespace KlaskApi.Services
 
         private List<Spiel> GenerateVorrundeSpiele(long rundeId, List<Teilnehmer> teilnehmerList)
         {
+            var spieleList = new List<Spiel>();
+
+            // Logic to generate Spiele based on the Teilnehmer List retrieved from Gruppenrunden Table in each group
+
+            for (int i = 0; i < teilnehmerList.Count - 1; i++)
+            {
+                for (int j = i + 1; j < teilnehmerList.Count; j++)
+                {
+                    // Fetch the GruppeId from TurniereTeilnehmer for each Teilnehmer
+                    var gruppeIdTeilnehmer1 = _context.TurniereTeilnehmer
+                        .Where(tt => tt.TeilnehmerId == teilnehmerList[i].TeilnehmerId)
+                        .Select(tt => tt.GruppeId)
+                        .FirstOrDefault();
+
+                    var gruppeIdTeilnehmer2 = _context.TurniereTeilnehmer
+                        .Where(tt => tt.TeilnehmerId == teilnehmerList[j].TeilnehmerId)
+                        .Select(tt => tt.GruppeId)
+                        .FirstOrDefault();
+
+                    // Check if Teilnehmer i and j belong to different groups
+                    if (gruppeIdTeilnehmer1 != gruppeIdTeilnehmer2)
+                    {
+                        // Create a Spiel for each pair of Teilnehmer in different groups
+                        var spiel = new Spiel
+                        {
+                            RundeId = rundeId,
+                            // Add other properties as needed
+                        };
+                        spieleList.Add(spiel);
+                        _context.Spiele.Add(spiel);
+                    }
+                }
+            }
+
+            return spieleList;
+        }
+
+
+        /*private List<Spiel> GenerateVorrundeSpiele(long rundeId, List<Teilnehmer> teilnehmerList)
+        {
 
             var spieleList = new List<Spiel>();
 
@@ -95,7 +135,7 @@ namespace KlaskApi.Services
                 }
             }
             return spieleList;
-        }
+        }*/
 
         private List<Teilnehmer> GetBestGroupTeilnehmer(long turnierId)
         {
@@ -153,6 +193,72 @@ namespace KlaskApi.Services
         private List<SpielTeilnehmer> GenerateSpielTeilnehmerVorrunde(long rundeId, List<Teilnehmer> teilnehmerList, List<Spiel> spieleList)
         {
             var spieleTeilnehmerList = new List<SpielTeilnehmer>();
+
+            // Generate unique SpielIds for the current group
+            var uniqueSpielIds = spieleList.Where(s => s.RundeId == rundeId).Select(s => s.SpielId).Distinct().ToList();
+
+            // Logic to generate Spiele based on teilnehmerList
+            // Assuming each Teilnehmer plays with all other Teilnehmer in the vorrunde
+            for (int i = 0; i < teilnehmerList.Count - 1; i++)
+            {
+                for (int j = i + 1; j < teilnehmerList.Count; j++)
+                {
+                    // Fetch the GruppeId from TurniereTeilnehmer for each Teilnehmer
+                    var gruppeIdTeilnehmer1 = _context.TurniereTeilnehmer
+                        .Where(tt => tt.TeilnehmerId == teilnehmerList[i].TeilnehmerId)
+                        .Select(tt => tt.GruppeId)
+                        .FirstOrDefault();
+
+                    var gruppeIdTeilnehmer2 = _context.TurniereTeilnehmer
+                        .Where(tt => tt.TeilnehmerId == teilnehmerList[j].TeilnehmerId)
+                        .Select(tt => tt.GruppeId)
+                        .FirstOrDefault();
+
+                    // Check if Teilnehmer i and j belong to different groups
+                    if (gruppeIdTeilnehmer1 != gruppeIdTeilnehmer2)
+                    {
+                        // Pick the next unique SpielId for the current group
+                        var spielId = uniqueSpielIds.FirstOrDefault();
+
+                        if (spielId != 0) // Check if there's a valid SpielId
+                        {
+                            // Create SpielTeilnehmer entities for the pair
+                            var spielTeilnehmer1 = new SpielTeilnehmer
+                            {
+                                SpielId = spielId,
+                                TeilnehmerId = teilnehmerList[i].TeilnehmerId,
+                                Punkte = null,
+                            };
+
+                            var spielTeilnehmer2 = new SpielTeilnehmer
+                            {
+                                SpielId = spielId,
+                                TeilnehmerId = teilnehmerList[j].TeilnehmerId,
+                                Punkte = null,
+                            };
+
+                            // Add the SpielTeilnehmer entities to the list
+                            spieleTeilnehmerList.Add(spielTeilnehmer1);
+                            spieleTeilnehmerList.Add(spielTeilnehmer2);
+
+                            // Remove the used SpielId from the list
+                            uniqueSpielIds.Remove(spielId);
+
+                            // Add SpielTeilnehmer entities to the context
+                            _context.SpieleTeilnehmer.Add(spielTeilnehmer1);
+                            _context.SpieleTeilnehmer.Add(spielTeilnehmer2);
+                        }
+                    }
+                }
+            }
+
+            return spieleTeilnehmerList;
+        }
+
+
+        /*private List<SpielTeilnehmer> GenerateSpielTeilnehmerVorrunde(long rundeId, List<Teilnehmer> teilnehmerList, List<Spiel> spieleList)
+        {
+            var spieleTeilnehmerList = new List<SpielTeilnehmer>();
             // Generate unique SpielIds for the current group
             var uniqueSpielIds = spieleList.Where(s => s.RundeId == rundeId).Select(s => s.SpielId).Distinct().ToList();
             // Logic to generate Spiele based on teilnehmerList
@@ -198,7 +304,7 @@ namespace KlaskApi.Services
             }
 
             return spieleTeilnehmerList;
-        }
+        }*/
 
     }
 }
