@@ -21,6 +21,173 @@ namespace KlaskApi.Controllers
             _context = context;
         }
 
+        [HttpGet("gruppenrundenResults")]
+        public async Task<ActionResult<object>> GruppenrundenResults()
+        {
+            try
+            {
+                var activeTurnier = await _context.Turniere.FirstOrDefaultAsync(t => t.IsActive);
+
+                if (activeTurnier == null)
+                {
+                    return NotFound("No active turnier found.");
+                }
+
+                // Get groups, participants, and games for the active turnier
+                var turnierDetails = await _context.SpieleTeilnehmer
+                    .Join(_context.Spiele, st => st.SpielId, s => s.SpielId, (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
+                    .Join(_context.Teilnehmer, j => j.SpieleTeilnehmer.TeilnehmerId, tn => tn.TeilnehmerId, (j, tn) => new { j.SpieleTeilnehmer, j.Spiel, Teilnehmer = tn })
+                    .Join(_context.TurniereTeilnehmer, j => j.Teilnehmer.TeilnehmerId, tt => tt.TeilnehmerId, (j, tt) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, TurnierTeilnehmer = tt })
+                    .Join(_context.Gruppen, j => j.TurnierTeilnehmer.GruppeId, g => g.GruppeId, (j, g) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, Gruppe = g })
+                    .Join(_context.Runden, j => j.Spiel.RundeId, r => r.RundeId, (j, r) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, j.Gruppe, Runde = r })
+                    .Where(j => j.Runde.RundeBezeichnung.Contains("Gruppenvorrunde"))
+                    .Join(_context.Turniere, j => j.Runde.TurnierId, t => t.Id, (j, t) => new
+                    {
+                        TeilnehmerId = j.Teilnehmer.TeilnehmerId,
+                        Vorname = j.Teilnehmer.Vorname,
+                        SpielTeilnehmerId = j.SpieleTeilnehmer.SpielTeilnehmerId,
+                        Punkte = j.SpieleTeilnehmer.Punkte,
+                        GruppeId = j.Gruppe.GruppeId,
+                        Gruppenname = j.Gruppe.Gruppenname,
+                        RundeId = j.Runde.RundeId,
+                        RundeBezeichnung = j.Runde.RundeBezeichnung,
+                        TurnierTitel = t.TurnierTitel,
+                        SpielId = j.Spiel.SpielId
+                    })
+                    .ToListAsync();
+
+                var result = turnierDetails.Distinct().Select(td => new
+                {
+                    GruppeId = td.GruppeId,
+                    Gruppenname = td.Gruppenname,
+                    TeilnehmerId = td.TeilnehmerId,
+                    Vorname = td.Vorname,
+                    RundeBezeichnung = td.RundeBezeichnung,
+                    AnzahlSpiele = GetAnzahlSpiele(td.TeilnehmerId, td.GruppeId),
+                    AnzahlSiege = GetAnzahlSiege(td.TeilnehmerId, td.GruppeId),
+                    SatzDifferenz = GetSatzDifferenz(td.TeilnehmerId, td.GruppeId)
+                }).ToList();
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in GruppenrundenDetails: {ex.Message}");
+                return StatusCode(500, $"Internal Server Error: {ex.Message}");
+            }
+        }
+
+        // Define helper methods to calculate AnzahlSpiele, AnzahlSiege, and SatzDifferenz
+        private long GetAnzahlSpiele(long teilnehmerId, long gruppeId)
+        {
+            try
+            {
+                // Count the number of games played by the participant in the group
+                /*var anzahlSpiele = _context.SpieleTeilnehmer
+                    .Where(st => st.TeilnehmerId == teilnehmerId)
+                    .Join(_context.Spiele, st => st.SpielId, s => s.SpielId, (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
+                    .Join(_context.TurniereTeilnehmer, j => j.SpieleTeilnehmer.TeilnehmerId, tt => tt.TeilnehmerId, (j, tt) => new { j.SpieleTeilnehmer, j.Spiel, TurnierTeilnehmer = tt })
+                    .Where(j => j.TurnierTeilnehmer.GruppeId == gruppeId && j.SpieleTeilnehmer.Punkte != null)
+                    .Count();*/
+
+                // Get groups, participants, and games for the active turnier
+                var anzahlSpiele = _context.SpieleTeilnehmer
+                    .Where(st => st.TeilnehmerId == teilnehmerId)
+                    .Join(_context.Spiele, st => st.SpielId, s => s.SpielId, (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
+                    .Join(_context.Teilnehmer, j => j.SpieleTeilnehmer.TeilnehmerId, tn => tn.TeilnehmerId, (j, tn) => new { j.SpieleTeilnehmer, j.Spiel, Teilnehmer = tn })
+                    .Join(_context.TurniereTeilnehmer, j => j.Teilnehmer.TeilnehmerId, tt => tt.TeilnehmerId, (j, tt) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, TurnierTeilnehmer = tt })
+                    .Join(_context.Gruppen, j => j.TurnierTeilnehmer.GruppeId, g => g.GruppeId, (j, g) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, Gruppe = g })
+                    .Join(_context.Runden, j => j.Spiel.RundeId, r => r.RundeId, (j, r) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, j.Gruppe, Runde = r })
+                    .Where(j => j.Runde.RundeBezeichnung.Contains("Gruppenvorrunde") && j.TurnierTeilnehmer.GruppeId == gruppeId && j.SpieleTeilnehmer.Punkte != null)
+                    .Count();
+
+                return anzahlSpiele;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in GetAnzahlSpiele: {ex.Message}");
+                // Handle exceptions appropriately, e.g., log or throw
+                throw;
+            }
+        }
+
+
+        private int GetAnzahlSiege(long teilnehmerId, long gruppeId)
+        {
+            try
+            {
+                // Count the number of victories by the participant in the group
+                /*var anzahlSiege = _context.SpieleTeilnehmer
+                    .Where(st => st.TeilnehmerId == teilnehmerId)
+                    .Join(_context.Spiele, st => st.SpielId, s => s.SpielId, (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
+                    .Join(_context.Teilnehmer, j => j.SpieleTeilnehmer.TeilnehmerId, tn => tn.TeilnehmerId, (j, tn) => new { j.SpieleTeilnehmer, j.Spiel, Teilnehmer = tn })
+                    .Join(_context.TurniereTeilnehmer, j => j.SpieleTeilnehmer.TeilnehmerId, tt => tt.TeilnehmerId, (j, tt) => new { j.SpieleTeilnehmer, j.Spiel, TurnierTeilnehmer = tt })
+                    .Where(j => j.TurnierTeilnehmer.GruppeId == gruppeId && j.SpieleTeilnehmer.Punkte != null)
+                    .Join(_context.SpieleTeilnehmer, j => j.Spiel.SpielId, opp => opp.SpielId, (j, opp) => new { j.SpieleTeilnehmer, Opponent = opp })
+                    .Where(j => j.Opponent.Punkte != null && j.SpieleTeilnehmer.Punkte > j.Opponent.Punkte)
+                    .Count();=> Error: counts Siege from all Runde (Gruppenvorrunde, Vorrunde)*/
+
+                var anzahlSiege = _context.SpieleTeilnehmer
+               .Where(st => st.TeilnehmerId == teilnehmerId)
+               .Join(_context.Spiele, st => st.SpielId, s => s.SpielId, (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
+               .Join(_context.Teilnehmer, j => j.SpieleTeilnehmer.TeilnehmerId, tn => tn.TeilnehmerId, (j, tn) => new { j.SpieleTeilnehmer, j.Spiel, Teilnehmer = tn })
+               .Join(_context.TurniereTeilnehmer, j => j.Teilnehmer.TeilnehmerId, tt => tt.TeilnehmerId, (j, tt) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, TurnierTeilnehmer = tt })
+               .Join(_context.Gruppen, j => j.TurnierTeilnehmer.GruppeId, g => g.GruppeId, (j, g) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, Gruppe = g })
+               .Join(_context.Runden, j => j.Spiel.RundeId, r => r.RundeId, (j, r) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, j.Gruppe, Runde = r })
+               .Where(j => j.Runde.RundeBezeichnung.Contains("Gruppenvorrunde") && j.TurnierTeilnehmer.GruppeId == gruppeId && j.SpieleTeilnehmer.Punkte != null)
+                /*Count only Spiele from the Gruppenvoorunde*/
+                .Join(_context.SpieleTeilnehmer, j => j.Spiel.SpielId, opp => opp.SpielId, (j, opp) => new { j.SpieleTeilnehmer, Opponent = opp })
+                .Where(j => j.Opponent.Punkte != null && j.SpieleTeilnehmer.Punkte > j.Opponent.Punkte)
+               .Count();
+
+                return anzahlSiege;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in GetAnzahlSiege: {ex.Message}");
+                // Handle exceptions appropriately, e.g., log or throw
+                throw;
+            }
+        }
+
+        private long GetSatzDifferenz(long teilnehmerId, long gruppeId)
+        {
+            try
+            {
+                // Calculate the set difference by the participant in the group
+                /*var satzDifferenz = _context.SpieleTeilnehmer
+                    .Where(st => st.TeilnehmerId == teilnehmerId)
+                    .Join(_context.Spiele, st => st.SpielId, s => s.SpielId, (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
+                    .Join(_context.TurniereTeilnehmer, j => j.SpieleTeilnehmer.TeilnehmerId, tt => tt.TeilnehmerId, (j, tt) => new { j.SpieleTeilnehmer, j.Spiel, TurnierTeilnehmer = tt })
+                    .Where(j => j.TurnierTeilnehmer.GruppeId == gruppeId && j.SpieleTeilnehmer.Punkte != null)
+                    .Join(_context.SpieleTeilnehmer, j => j.Spiel.SpielId, opp => opp.SpielId, (j, opp) => new { j.SpieleTeilnehmer, Opponent = opp })
+                    .Where(j => j.Opponent.Punkte != null)
+                    .Sum(j => (j.SpieleTeilnehmer.Punkte - j.Opponent.Punkte).GetValueOrDefault());*/
+
+                var satzDifferenz = _context.SpieleTeilnehmer
+                .Where(st => st.TeilnehmerId == teilnehmerId)
+                .Join(_context.Spiele, st => st.SpielId, s => s.SpielId, (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
+                .Join(_context.Teilnehmer, j => j.SpieleTeilnehmer.TeilnehmerId, tn => tn.TeilnehmerId, (j, tn) => new { j.SpieleTeilnehmer, j.Spiel, Teilnehmer = tn })
+                .Join(_context.TurniereTeilnehmer, j => j.Teilnehmer.TeilnehmerId, tt => tt.TeilnehmerId, (j, tt) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, TurnierTeilnehmer = tt })
+                .Join(_context.Gruppen, j => j.TurnierTeilnehmer.GruppeId, g => g.GruppeId, (j, g) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, Gruppe = g })
+                .Join(_context.Runden, j => j.Spiel.RundeId, r => r.RundeId, (j, r) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, j.Gruppe, Runde = r })
+                .Where(j => j.Runde.RundeBezeichnung.Contains("Gruppenvorrunde") && j.TurnierTeilnehmer.GruppeId == gruppeId && j.SpieleTeilnehmer.Punkte != null)
+                .Join(_context.SpieleTeilnehmer, j => j.Spiel.SpielId, opp => opp.SpielId, (j, opp) => new { j.SpieleTeilnehmer, Opponent = opp })
+                .Where(j => j.Opponent.Punkte != null)
+                 .Sum(j => (j.SpieleTeilnehmer.Punkte - j.Opponent.Punkte).GetValueOrDefault());
+
+                return satzDifferenz;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in GetSatzDifferenz: {ex.Message}");
+                // Handle exceptions appropriately, e.g., log or throw
+                throw;
+            }
+        }
+
+
+
         [HttpGet("gruppenrundenDetails")]
         public async Task<ActionResult<object>> GruppenrundenDetails()
         {
@@ -33,9 +200,6 @@ namespace KlaskApi.Controllers
                 {
                     return NotFound("No active turnier found.");
                 }
-
-
-
 
                 // Get groups, participants, and games for the active turnier
                 var turnierDetails = await _context.SpieleTeilnehmer
