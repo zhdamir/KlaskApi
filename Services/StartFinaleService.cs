@@ -142,7 +142,7 @@ namespace KlaskApi.Services
 
             return bestTeilnehmerList;
         }*/
-        private List<Teilnehmer> GetBestVorrundeTeilnehmer(long turnierId)
+        /*private List<Teilnehmer> GetBestVorrundeTeilnehmer(long turnierId)
         {
             var bestTeilnehmerList = new List<Teilnehmer>();
 
@@ -184,6 +184,57 @@ namespace KlaskApi.Services
             }
 
             return bestTeilnehmerList;
+        }*/
+
+        private List<Teilnehmer> GetBestVorrundeTeilnehmer(long turnierId)
+        {
+            try
+            {
+                var bestTeilnehmerList = _context.SpieleTeilnehmer
+                    .Join(_context.Spiele, st => st.SpielId, s => s.SpielId, (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
+                    .Join(_context.Teilnehmer, j => j.SpieleTeilnehmer.TeilnehmerId, tn => tn.TeilnehmerId, (j, tn) => new { j.SpieleTeilnehmer, j.Spiel, Teilnehmer = tn })
+                    .Join(_context.TurniereTeilnehmer, j => j.Teilnehmer.TeilnehmerId, tt => tt.TeilnehmerId, (j, tt) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, TurnierTeilnehmer = tt })
+                    .Join(_context.Gruppen, j => j.TurnierTeilnehmer.GruppeId, g => g.GruppeId, (j, g) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, Gruppe = g })
+                    .Join(_context.Runden, j => j.Spiel.RundeId, r => r.RundeId, (j, r) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, j.Gruppe, Runde = r })
+                    .Where(j => j.Runde.RundeBezeichnung.Contains("Vorrunde"))
+                    .Join(_context.Turniere, j => j.Runde.TurnierId, t => t.Id, (j, t) => new
+                    {
+                        Teilnehmer = j.Teilnehmer,
+                        GruppeId = j.Gruppe.GruppeId,
+                        Gruppenname = j.Gruppe.Gruppenname,
+                        RundeBezeichnung = j.Runde.RundeBezeichnung,
+                        SatzDifferenz = _context.SpieleTeilnehmer
+                            .Where(st => st.TeilnehmerId == j.Teilnehmer.TeilnehmerId)
+                            .Join(_context.Spiele, st => st.SpielId, s => s.SpielId, (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
+                            .Join(_context.Teilnehmer, innerJ => innerJ.SpieleTeilnehmer.TeilnehmerId, tn => tn.TeilnehmerId, (innerJ, tn) => new { innerJ.SpieleTeilnehmer, innerJ.Spiel, Teilnehmer = tn })
+                            .Join(_context.TurniereTeilnehmer, innerJ => innerJ.Teilnehmer.TeilnehmerId, tt => tt.TeilnehmerId, (innerJ, tt) => new { innerJ.SpieleTeilnehmer, innerJ.Spiel, innerJ.Teilnehmer, TurnierTeilnehmer = tt })
+                            .Join(_context.Gruppen, innerJ => innerJ.TurnierTeilnehmer.GruppeId, g => g.GruppeId, (innerJ, g) => new { innerJ.SpieleTeilnehmer, innerJ.Spiel, innerJ.Teilnehmer, innerJ.TurnierTeilnehmer, Gruppe = g })
+                            .Join(_context.Runden, innerJ => innerJ.Spiel.RundeId, innerR => innerR.RundeId, (innerJ, innerR) => new { innerJ.SpieleTeilnehmer, innerJ.Spiel, innerJ.Teilnehmer, innerJ.TurnierTeilnehmer, innerJ.Gruppe, InnerRunde = innerR })
+                            .Where(innerJ => innerJ.InnerRunde.RundeBezeichnung.Contains("Vorrunde") && innerJ.SpieleTeilnehmer.Punkte != null)
+                            .Join(_context.SpieleTeilnehmer, innerJ => innerJ.Spiel.SpielId, opp => opp.SpielId, (innerJ, opp) => new { innerJ.SpieleTeilnehmer, Opponent = opp })
+                            .Where(innerJ => innerJ.Opponent.Punkte != null)
+                            .Sum(innerJ => (innerJ.SpieleTeilnehmer.Punkte - innerJ.Opponent.Punkte).GetValueOrDefault())
+                    })
+                    .GroupBy(j => j.Teilnehmer.TeilnehmerId)
+                    .Select(group => new
+                    {
+                        TeilnehmerId = group.Key,
+                        BestSatzDifferenz = group.Max(j => j.SatzDifferenz)
+                    })
+                    .OrderByDescending(entry => entry.BestSatzDifferenz)
+                    .Take(4)
+                    .Select(entry => entry.TeilnehmerId)
+                    .ToList();
+                var bestTeilnehmer = _context.Teilnehmer
+                    .Where(tn => bestTeilnehmerList.Contains(tn.TeilnehmerId))
+                    .ToList();
+                return bestTeilnehmer;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in GruppenrundenDetails: {ex.Message}");
+                return null;
+            }
         }
 
 
