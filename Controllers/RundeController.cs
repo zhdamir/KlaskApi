@@ -254,6 +254,38 @@ namespace KlaskApi.Controllers
             }
         }
 
+        /*staring the Finale*/
+        [HttpPost("startFinale")]
+        public async Task<IActionResult> StartFinale([FromQuery] long turnierId)
+        {
+            if (turnierId <= 0)
+            {
+                // Log or return a more specific error response for an invalid turnierId
+                return BadRequest("Invalid turnierId. TurnierId must be greater than 0.");
+            }
+
+            try
+            {
+                var finaleService = new StartFinaleService(_context);
+                var createdFinale = await finaleService.FinaleTeilnehmer(turnierId);
+
+                if (!createdFinale)
+                {
+                    // Handle the case where grouping failed
+                    return BadRequest("Finale failed. Check your data.");
+                }
+
+                // Return success response or createdGroups if needed
+                return Ok(createdFinale);
+            }
+            catch (Exception ex)
+            {
+                // Handle exceptions appropriately
+                Console.WriteLine($"Error in StartTurnier: {ex.Message}");
+                return StatusCode(500, $"Internal Server Error: {ex.Message}");
+            }
+        }
+
 
         /*staring the Vorrunde*/
         [HttpPost("startVorrunde")]
