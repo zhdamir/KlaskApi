@@ -113,31 +113,103 @@ namespace KlaskApi.Services
         }
 
 
-        /*private List<Spiel> GenerateVorrundeSpiele(long rundeId, List<Teilnehmer> teilnehmerList)
+        private List<Teilnehmer> GetBestGroupTeilnehmer(long turnierId)
         {
+            var bestTeilnehmerList = new List<Teilnehmer>();
 
-            var spieleList = new List<Spiel>();
+            var groupedTeilnehmerSatzDifferenz = _context.SpieleTeilnehmer
+                .Join(_context.Spiele, st => st.SpielId, s => s.SpielId, (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
+                .Join(_context.Runden, j => j.Spiel.RundeId, r => r.RundeId, (j, r) => new { SpieleTeilnehmer = j.SpieleTeilnehmer, Spiel = j.Spiel, Runde = r })
+                .Join(_context.TurniereTeilnehmer, j => j.SpieleTeilnehmer.TeilnehmerId, tt => tt.TeilnehmerId, (j, tt) => new { SpieleTeilnehmer = j.SpieleTeilnehmer, Spiel = j.Spiel, Runde = j.Runde, TurnierTeilnehmer = tt })
+                .Where(j => j.Runde.TurnierId == turnierId && j.SpieleTeilnehmer.Punkte != null)
+                .ToList();
 
-            // Logic to generate Spiele based on the Teilnehmer List retrieved from Gruppenrunden Table in each group
-
-            for (int i = 0; i < teilnehmerList.Count - 1; i++)
-            {
-                for (int j = i + 1; j < teilnehmerList.Count; j++)
+            var groupedTeilnehmerSatzDifferenzCalculation = groupedTeilnehmerSatzDifferenz
+                .GroupBy(j => new { GruppeId = j.TurnierTeilnehmer.GruppeId, TeilnehmerId = j.SpieleTeilnehmer.TeilnehmerId })
+                .Select(group => new
                 {
-                    // Create a Spiel for each pair of Teilnehmer in the group
-                    var spiel = new Spiel
-                    {
-                        RundeId = rundeId,
+                    GruppeId = group.Key.GruppeId,
+                    TeilnehmerId = group.Key.TeilnehmerId,
+                    TotalSatzDifferenz = group.Sum(j => (j.SpieleTeilnehmer.Punkte - groupedTeilnehmerSatzDifferenz
+                        .Where(opp => opp.SpieleTeilnehmer.SpielId == j.SpieleTeilnehmer.SpielId && opp.SpieleTeilnehmer.TeilnehmerId != j.SpieleTeilnehmer.TeilnehmerId)
+                        .Select(opp => opp.SpieleTeilnehmer.Punkte)
+                        .FirstOrDefault()).GetValueOrDefault())
+                })
+                .GroupBy(entry => entry.GruppeId)
+                .SelectMany(group => group.OrderByDescending(entry => entry.TotalSatzDifferenz).Take(3))
+                .ToList();
 
-                    };
-                    spieleList.Add(spiel);
-                    _context.Spiele.Add(spiel);
+            foreach (var entry in groupedTeilnehmerSatzDifferenzCalculation)
+            {
+                var teilnehmer = _context.Teilnehmer
+                    .Join(_context.TurniereTeilnehmer, tn => tn.TeilnehmerId, tt => tt.TeilnehmerId, (tn, tt) => new { Teilnehmer = tn, TurnierTeilnehmer = tt })
+                    .Where(joined => joined.TurnierTeilnehmer.GruppeId == entry.GruppeId && joined.TurnierTeilnehmer.TeilnehmerId == entry.TeilnehmerId)
+                    .Select(joined => joined.Teilnehmer)
+                    .FirstOrDefault();
+
+                if (teilnehmer != null)
+                {
+                    bestTeilnehmerList.Add(teilnehmer);
                 }
             }
-            return spieleList;
+
+            return bestTeilnehmerList;
+        }
+
+
+        /*private List<Teilnehmer> GetBestGroupTeilnehmer(long turnierId)
+        {
+            var bestTeilnehmerList = new List<Teilnehmer>();
+
+            var groupedTeilnehmerSatzDifferenz = _context.SpieleTeilnehmer
+                .Join(_context.Spiele,
+                    st => st.SpielId,
+                    s => s.SpielId,
+                    (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
+                .Join(_context.Runden,
+                    j => j.Spiel.RundeId,
+                    r => r.RundeId,
+                    (j, r) => new { j.SpieleTeilnehmer, j.Spiel, Runde = r })
+                .Join(_context.TurniereTeilnehmer,
+                    j => j.SpieleTeilnehmer.TeilnehmerId,
+                    tt => tt.TeilnehmerId,
+                    (j, tt) => new { j.SpieleTeilnehmer, j.Spiel, j.Runde, TurnierTeilnehmer = tt })
+                .Where(j => j.Runde.TurnierId == turnierId && j.SpieleTeilnehmer.Punkte != null)
+                .GroupBy(j => new { j.SpieleTeilnehmer.TeilnehmerId, j.TurnierTeilnehmer.GruppeId })
+                .Select(group => new
+                {
+                    TeilnehmerId = group.Key.TeilnehmerId,
+                    GruppeId = group.Key.GruppeId,
+                    TotalSatzDifferenz = group.Sum(j => (j.SpieleTeilnehmer.Punkte - _context.SpieleTeilnehmer
+                        .Where(opp => opp.SpielId == j.SpieleTeilnehmer.SpielId && opp.TeilnehmerId != j.SpieleTeilnehmer.TeilnehmerId)
+                        .Select(opp => opp.Punkte)
+                        .FirstOrDefault()).GetValueOrDefault())
+                })
+                .OrderByDescending(entry => entry.TotalSatzDifferenz)
+                .ToList();
+
+            foreach (var entry in groupedTeilnehmerSatzDifferenz)
+            {
+                var teilnehmer = _context.Teilnehmer
+                    .Join(_context.TurniereTeilnehmer,
+                        tn => tn.TeilnehmerId,
+                        tt => tt.TeilnehmerId,
+                        (tn, tt) => new { Teilnehmer = tn, TurnierTeilnehmer = tt })
+                    .Where(joined => joined.TurnierTeilnehmer.GruppeId == entry.GruppeId && joined.TurnierTeilnehmer.TeilnehmerId == entry.TeilnehmerId)
+                    .Select(joined => joined.Teilnehmer)
+                    .FirstOrDefault();
+
+                if (teilnehmer != null)
+                {
+                    bestTeilnehmerList.Add(teilnehmer);
+                }
+            }
+
+            return bestTeilnehmerList;
         }*/
 
-        private List<Teilnehmer> GetBestGroupTeilnehmer(long turnierId)
+
+        /*private List<Teilnehmer> GetBestGroupTeilnehmer(long turnierId)
         {
             var bestTeilnehmerList = new List<Teilnehmer>();
 
@@ -188,7 +260,7 @@ namespace KlaskApi.Services
             }
 
             return bestTeilnehmerList;
-        }
+        }*/
 
         private List<SpielTeilnehmer> GenerateSpielTeilnehmerVorrunde(long rundeId, List<Teilnehmer> teilnehmerList, List<Spiel> spieleList)
         {
@@ -256,55 +328,6 @@ namespace KlaskApi.Services
         }
 
 
-        /*private List<SpielTeilnehmer> GenerateSpielTeilnehmerVorrunde(long rundeId, List<Teilnehmer> teilnehmerList, List<Spiel> spieleList)
-        {
-            var spieleTeilnehmerList = new List<SpielTeilnehmer>();
-            // Generate unique SpielIds for the current group
-            var uniqueSpielIds = spieleList.Where(s => s.RundeId == rundeId).Select(s => s.SpielId).Distinct().ToList();
-            // Logic to generate Spiele based on teilnehmerList
-            // Assuming each Teilnehmer plays with all other Teilnehmer in the vorrunde
-            for (int i = 0; i < teilnehmerList.Count - 1; i++)
-            {
-                for (int j = i + 1; j < teilnehmerList.Count; j++)
-                {
-
-                    // Pick the next unique SpielId for the current group
-                    var spielId = uniqueSpielIds.FirstOrDefault();
-
-                    if (spielId != 0) // Check if there's a valid SpielId
-                    {
-                        // Create SpielTeilnehmer entities for the pair
-                        var spielTeilnehmer1 = new SpielTeilnehmer
-                        {
-                            SpielId = spielId,
-                            TeilnehmerId = teilnehmerList[i].TeilnehmerId,
-                            Punkte = null,
-                        };
-
-                        var spielTeilnehmer2 = new SpielTeilnehmer
-                        {
-                            SpielId = spielId,
-                            TeilnehmerId = teilnehmerList[j].TeilnehmerId,
-                            Punkte = null,
-                        };
-
-                        // Add the SpielTeilnehmer entities to the list
-                        spieleTeilnehmerList.Add(spielTeilnehmer1);
-                        spieleTeilnehmerList.Add(spielTeilnehmer2);
-
-                        // Remove the used SpielId from the list
-                        uniqueSpielIds.Remove(spielId);
-
-                        // Add SpielTeilnehmer entities to the context
-                        _context.SpieleTeilnehmer.Add(spielTeilnehmer1);
-                        _context.SpieleTeilnehmer.Add(spielTeilnehmer2);
-                    }
-                }
-
-            }
-
-            return spieleTeilnehmerList;
-        }*/
 
     }
 }

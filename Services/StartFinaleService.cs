@@ -271,45 +271,130 @@ namespace KlaskApi.Services
             // Generate unique SpielIds for the current group
             var uniqueSpielIds = spieleList.Where(s => s.RundeId == rundeId).Select(s => s.SpielId).Distinct().ToList();
 
-            // Logic to generate Spiele based on teilnehmerList
-            // Assuming each pair of Teilnehmer plays in the Finale
-            for (int i = 0; i < teilnehmerList.Count - 1; i += 2)
+            // Check if there are enough unique SpielIds
+            if (uniqueSpielIds.Count < 2)
             {
-                // Pick the next unique SpielId for the current group
-                var spielId = uniqueSpielIds.FirstOrDefault();
+                Console.WriteLine("Error: Not enough unique SpielIds for matchups.");
+                return null;
+            }
 
-                if (spielId != 0) // Check if there's a valid SpielId
+            // Calculate SatzDifferenz for each Teilnehmer
+            var teilnehmerWithScores = teilnehmerList.Select(teilnehmer => new
+            {
+                Teilnehmer = teilnehmer,
+                SatzDifferenz = GetSatzDifferenz(teilnehmer.TeilnehmerId)
+            });
+
+            // Sort Teilnehmer by SatzDifferenz in descending order
+            var sortedTeilnehmer = teilnehmerWithScores.OrderByDescending(entry => entry.SatzDifferenz).ToList();
+
+            // Create SpielTeilnehmer entities for first place matchup
+            var firstPlaceSpielId = uniqueSpielIds.FirstOrDefault();
+
+            if (firstPlaceSpielId != 0)
+            {
+                uniqueSpielIds.Remove(firstPlaceSpielId);
+
+                foreach (var teilnehmerEntry in sortedTeilnehmer.Take(2))
                 {
-                    // Create SpielTeilnehmer entities for the pair
-                    var spielTeilnehmer1 = new SpielTeilnehmer
+                    var spielTeilnehmer = new SpielTeilnehmer
                     {
-                        SpielId = spielId,
-                        TeilnehmerId = teilnehmerList[i].TeilnehmerId,
+                        SpielId = firstPlaceSpielId,
+                        TeilnehmerId = teilnehmerEntry.Teilnehmer.TeilnehmerId,
                         Punkte = null,
                     };
 
-                    var spielTeilnehmer2 = new SpielTeilnehmer
-                    {
-                        SpielId = spielId,
-                        TeilnehmerId = teilnehmerList[i + 1].TeilnehmerId,
-                        Punkte = null,
-                    };
+                    spieleTeilnehmerList.Add(spielTeilnehmer);
+                    _context.SpieleTeilnehmer.Add(spielTeilnehmer);
 
-                    // Add the SpielTeilnehmer entities to the list
-                    spieleTeilnehmerList.Add(spielTeilnehmer1);
-                    spieleTeilnehmerList.Add(spielTeilnehmer2);
-
-                    // Remove the used SpielId from the list
-                    uniqueSpielIds.Remove(spielId);
-
-                    // Add SpielTeilnehmer entities to the context
-                    _context.SpieleTeilnehmer.Add(spielTeilnehmer1);
-                    _context.SpieleTeilnehmer.Add(spielTeilnehmer2);
+                    Console.WriteLine($"Created SpielTeilnehmer for first place matchup: SpielId = {spielTeilnehmer.SpielId}, TeilnehmerId = {spielTeilnehmer.TeilnehmerId}");
                 }
+            }
+            else
+            {
+                Console.WriteLine("Error: No valid SpielId found for first place matchup.");
+                return null;
+            }
+
+            // Create SpielTeilnehmer entities for third place matchup
+            var thirdPlaceSpielId = uniqueSpielIds.FirstOrDefault();
+
+            if (thirdPlaceSpielId != 0)
+            {
+                uniqueSpielIds.Remove(thirdPlaceSpielId);
+
+                foreach (var teilnehmerEntry in sortedTeilnehmer.Skip(2).Take(2))
+                {
+                    var spielTeilnehmer = new SpielTeilnehmer
+                    {
+                        SpielId = thirdPlaceSpielId,
+                        TeilnehmerId = teilnehmerEntry.Teilnehmer.TeilnehmerId,
+                        Punkte = null,
+                    };
+
+                    spieleTeilnehmerList.Add(spielTeilnehmer);
+                    _context.SpieleTeilnehmer.Add(spielTeilnehmer);
+
+                    Console.WriteLine($"Created SpielTeilnehmer for third place matchup: SpielId = {spielTeilnehmer.SpielId}, TeilnehmerId = {spielTeilnehmer.TeilnehmerId}");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Error: No valid SpielId found for third place matchup.");
+                return null;
             }
 
             return spieleTeilnehmerList;
         }
+
+
+
+        /* private List<SpielTeilnehmer> GenerateSpielTeilnehmerFinale(long rundeId, List<Teilnehmer> teilnehmerList, List<Spiel> spieleList)
+         {
+             var spieleTeilnehmerList = new List<SpielTeilnehmer>();
+
+             // Generate unique SpielIds for the current group
+             var uniqueSpielIds = spieleList.Where(s => s.RundeId == rundeId).Select(s => s.SpielId).Distinct().ToList();
+
+             // Logic to generate Spiele based on teilnehmerList
+             // Assuming each pair of Teilnehmer plays in the Finale
+             for (int i = 0; i < teilnehmerList.Count - 1; i += 2)
+             {
+                 // Pick the next unique SpielId for the current group
+                 var spielId = uniqueSpielIds.FirstOrDefault();
+
+                 if (spielId != 0) // Check if there's a valid SpielId
+                 {
+                     // Create SpielTeilnehmer entities for the pair
+                     var spielTeilnehmer1 = new SpielTeilnehmer
+                     {
+                         SpielId = spielId,
+                         TeilnehmerId = teilnehmerList[i].TeilnehmerId,
+                         Punkte = null,
+                     };
+
+                     var spielTeilnehmer2 = new SpielTeilnehmer
+                     {
+                         SpielId = spielId,
+                         TeilnehmerId = teilnehmerList[i + 1].TeilnehmerId,
+                         Punkte = null,
+                     };
+
+                     // Add the SpielTeilnehmer entities to the list
+                     spieleTeilnehmerList.Add(spielTeilnehmer1);
+                     spieleTeilnehmerList.Add(spielTeilnehmer2);
+
+                     // Remove the used SpielId from the list
+                     uniqueSpielIds.Remove(spielId);
+
+                     // Add SpielTeilnehmer entities to the context
+                     _context.SpieleTeilnehmer.Add(spielTeilnehmer1);
+                     _context.SpieleTeilnehmer.Add(spielTeilnehmer2);
+                 }
+             }
+
+             return spieleTeilnehmerList;
+         }*/
 
 
 
