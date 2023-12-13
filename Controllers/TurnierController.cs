@@ -20,6 +20,181 @@ namespace KlaskApi.Controllers
         {
             _context = context;
         }
+        [HttpGet("selectedTurnierDetails/{turnierId}")]
+        public async Task<ActionResult<object>> SelectedTurnierDetails(long turnierId)
+        {
+            try
+            {
+                // Get the active turnier
+                var requestedTurnier = await _context.Turniere.FirstOrDefaultAsync(t => t.Id == turnierId);
+
+                if (requestedTurnier == null)
+                {
+                    return NotFound("Turnier with Id " + turnierId + " not found.");
+                }
+
+                // Get groups and participants for the active turnier
+                var turnierDetails = await _context.Gruppen
+                    .Join(_context.TurniereTeilnehmer,
+                        g => g.GruppeId,
+                        tt => tt.GruppeId,
+                        (g, tt) => new { Gruppe = g, TurnierTeilnehmer = tt })
+                    .Join(_context.Teilnehmer,
+                        j => j.TurnierTeilnehmer.TeilnehmerId,
+                        t => t.TeilnehmerId,
+                        (j, t) => new { j.Gruppe, j.TurnierTeilnehmer, Teilnehmer = t })
+                    .Where(j => j.Gruppe.TurnierId == turnierId)
+                    .Select(j => new
+                    {
+                        GruppeId = j.Gruppe.GruppeId,
+                        Gruppenname = j.Gruppe.Gruppenname,
+                        Teilnehmer = new
+                        {
+                            TeilnehmerId = j.Teilnehmer.TeilnehmerId,
+                            Vorname = j.Teilnehmer.Vorname,
+                            // Add other properties as needed
+                        }
+                    })
+                    .GroupBy(j => new { j.GruppeId, j.Gruppenname })
+                    .Select(g => new
+                    {
+                        GruppeId = g.Key.GruppeId,
+                        Gruppenname = g.Key.Gruppenname,
+                        Teilnehmer = g.Select(j => j.Teilnehmer).ToList()
+                    })
+                    .ToListAsync();
+
+                return turnierDetails;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in GetCurrentTurnierDetails: {ex.Message}");
+                return StatusCode(500, $"Internal Server Error: {ex.Message}");
+            }
+        }
+
+
+        [HttpGet("gruppenrundenDetailsHistorie/{turnierId}")]
+        public async Task<ActionResult<object>> GruppenrundenDetailsHistorie(long turnierId)
+        {
+            try
+            {
+                // Get the active turnier
+                var requestedTurnier = await _context.Turniere.FirstOrDefaultAsync(t => t.Id == turnierId);
+
+                if (requestedTurnier == null)
+                {
+                    return NotFound("No  turnier found.");
+                }
+
+                // Get groups, participants, and games for the active turnier
+                var turnierDetails = await _context.SpieleTeilnehmer
+                    .Join(_context.Spiele,
+                        st => st.SpielId,
+                        s => s.SpielId,
+                        (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
+                    .Join(_context.Teilnehmer,
+                        j => j.SpieleTeilnehmer.TeilnehmerId,
+                        tn => tn.TeilnehmerId,
+                        (j, tn) => new { j.SpieleTeilnehmer, j.Spiel, Teilnehmer = tn })
+                    .Join(_context.TurniereTeilnehmer,
+                        j => j.Teilnehmer.TeilnehmerId,
+                        tt => tt.TeilnehmerId,
+                        (j, tt) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, TurnierTeilnehmer = tt })
+                    .Join(_context.Gruppen,
+                        j => j.TurnierTeilnehmer.GruppeId,
+                        g => g.GruppeId,
+                        (j, g) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, Gruppe = g })
+                    .Join(_context.Runden,
+                        j => j.Spiel.RundeId,
+                        r => r.RundeId,
+                        (j, r) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, j.Gruppe, Runde = r })
+                       .Where(j => j.Runde.RundeBezeichnung.Contains("Gruppenvorrunde") && j.Runde.TurnierId == turnierId)
+                    .Join(_context.Turniere,
+                        j => j.Runde.TurnierId,
+                        t => t.Id,
+                        (j, t) => new
+                        {
+                            TeilnehmerId = j.Teilnehmer.TeilnehmerId,
+                            Vorname = j.Teilnehmer.Vorname,
+                            SpielTeilnehmerId = j.SpieleTeilnehmer.SpielTeilnehmerId,
+                            Punkte = j.SpieleTeilnehmer.Punkte,
+                            GruppeId = j.Gruppe.GruppeId,
+                            Gruppenname = j.Gruppe.Gruppenname,
+                            RundeId = j.Runde.RundeId,
+                            RundeBezeichnung = j.Runde.RundeBezeichnung,
+                            TurnierTitel = t.TurnierTitel,
+                            SpielId = j.Spiel.SpielId
+                        })
+                    .ToListAsync();
+
+                return turnierDetails;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in CurrentTurnierDetails: {ex.Message}");
+                return StatusCode(500, $"Internal Server Error: {ex.Message}");
+            }
+        }
+
+        [HttpGet("gruppenrundenResultsHistorie/{turnierId}")]
+        public async Task<ActionResult<object>> GruppenrundenResultsHistorie(long turnierId)
+        {
+            try
+            {
+                var requestedTurnier = await _context.Turniere.FirstOrDefaultAsync(t => t.Id == turnierId);
+
+                if (requestedTurnier == null)
+                {
+                    return NotFound("No  turnier found.");
+                }
+
+                // Get groups, participants, and games for the active turnier
+                var turnierDetails = await _context.SpieleTeilnehmer
+                    .Join(_context.Spiele, st => st.SpielId, s => s.SpielId, (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
+                    .Join(_context.Teilnehmer, j => j.SpieleTeilnehmer.TeilnehmerId, tn => tn.TeilnehmerId, (j, tn) => new { j.SpieleTeilnehmer, j.Spiel, Teilnehmer = tn })
+                    .Join(_context.TurniereTeilnehmer, j => j.Teilnehmer.TeilnehmerId, tt => tt.TeilnehmerId, (j, tt) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, TurnierTeilnehmer = tt })
+                    .Join(_context.Gruppen, j => j.TurnierTeilnehmer.GruppeId, g => g.GruppeId, (j, g) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, Gruppe = g })
+                    .Join(_context.Runden, j => j.Spiel.RundeId, r => r.RundeId, (j, r) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, j.Gruppe, Runde = r })
+                    .Where(j => j.Runde.RundeBezeichnung.Contains("Gruppenvorrunde") && j.Runde.TurnierId == turnierId)
+                    .Join(_context.Turniere, j => j.Runde.TurnierId, t => t.Id, (j, t) => new
+                    {
+                        TeilnehmerId = j.Teilnehmer.TeilnehmerId,
+                        Vorname = j.Teilnehmer.Vorname,
+                        SpielTeilnehmerId = j.SpieleTeilnehmer.SpielTeilnehmerId,
+                        Punkte = j.SpieleTeilnehmer.Punkte,
+                        GruppeId = j.Gruppe.GruppeId,
+                        Gruppenname = j.Gruppe.Gruppenname,
+                        RundeId = j.Runde.RundeId,
+                        RundeBezeichnung = j.Runde.RundeBezeichnung,
+                        TurnierTitel = t.TurnierTitel,
+                        SpielId = j.Spiel.SpielId
+                    })
+                    .ToListAsync();
+
+                var result = turnierDetails.Distinct().Select(td => new
+                {
+                    GruppeId = td.GruppeId,
+                    Gruppenname = td.Gruppenname,
+                    TeilnehmerId = td.TeilnehmerId,
+                    Vorname = td.Vorname,
+                    RundeBezeichnung = td.RundeBezeichnung,
+                    AnzahlSpiele = GetAnzahlSpiele(td.TeilnehmerId, td.GruppeId),
+                    AnzahlSiege = GetAnzahlSiege(td.TeilnehmerId, td.GruppeId),
+                    SatzDifferenz = GetSatzDifferenz(td.TeilnehmerId, td.GruppeId)
+                }).ToList();
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in GruppenrundenDetails: {ex.Message}");
+                return StatusCode(500, $"Internal Server Error: {ex.Message}");
+            }
+        }
+
+
+
 
         [HttpGet("gruppenrundenResults")]
         public async Task<ActionResult<object>> GruppenrundenResults()
@@ -40,7 +215,7 @@ namespace KlaskApi.Controllers
                     .Join(_context.TurniereTeilnehmer, j => j.Teilnehmer.TeilnehmerId, tt => tt.TeilnehmerId, (j, tt) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, TurnierTeilnehmer = tt })
                     .Join(_context.Gruppen, j => j.TurnierTeilnehmer.GruppeId, g => g.GruppeId, (j, g) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, Gruppe = g })
                     .Join(_context.Runden, j => j.Spiel.RundeId, r => r.RundeId, (j, r) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, j.Gruppe, Runde = r })
-                    .Where(j => j.Runde.RundeBezeichnung.Contains("Gruppenvorrunde"))
+                    .Where(j => j.Runde.RundeBezeichnung.Contains("Gruppenvorrunde") && j.Runde.TurnierId == activeTurnier.Id)
                     .Join(_context.Turniere, j => j.Runde.TurnierId, t => t.Id, (j, t) => new
                     {
                         TeilnehmerId = j.Teilnehmer.TeilnehmerId,
@@ -223,7 +398,7 @@ namespace KlaskApi.Controllers
                         j => j.Spiel.RundeId,
                         r => r.RundeId,
                         (j, r) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, j.Gruppe, Runde = r })
-                       .Where(j => j.Runde.RundeBezeichnung.Contains("Gruppenvorrunde"))
+                       .Where(j => j.Runde.RundeBezeichnung.Contains("Gruppenvorrunde") && j.Runde.TurnierId == activeTurnier.Id)
                     .Join(_context.Turniere,
                         j => j.Runde.TurnierId,
                         t => t.Id,
@@ -250,6 +425,8 @@ namespace KlaskApi.Controllers
                 return StatusCode(500, $"Internal Server Error: {ex.Message}");
             }
         }
+
+
 
 
 
