@@ -49,6 +49,7 @@ namespace KlaskApi.Controllers
                         j => j.Teilnehmer.TeilnehmerId,
                         tt => tt.TeilnehmerId,
                         (j, tt) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, TurnierTeilnehmer = tt })
+                          .Where(j => j.TurnierTeilnehmer.TurnierId == turnierId)
                     .Join(_context.Gruppen,
                         j => j.TurnierTeilnehmer.GruppeId,
                         g => g.GruppeId,
@@ -104,6 +105,7 @@ namespace KlaskApi.Controllers
                     .Join(_context.Spiele, st => st.SpielId, s => s.SpielId, (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
                     .Join(_context.Teilnehmer, j => j.SpieleTeilnehmer.TeilnehmerId, tn => tn.TeilnehmerId, (j, tn) => new { j.SpieleTeilnehmer, j.Spiel, Teilnehmer = tn })
                     .Join(_context.TurniereTeilnehmer, j => j.Teilnehmer.TeilnehmerId, tt => tt.TeilnehmerId, (j, tt) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, TurnierTeilnehmer = tt })
+                      .Where(j => j.TurnierTeilnehmer.TurnierId == turnierId)
                     .Join(_context.Gruppen, j => j.TurnierTeilnehmer.GruppeId, g => g.GruppeId, (j, g) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, Gruppe = g })
                     .Join(_context.Runden, j => j.Spiel.RundeId, r => r.RundeId, (j, r) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, j.Gruppe, Runde = r })
                     .Where(j => j.Runde.RundeBezeichnung.Contains("Vorrunde") && j.Runde.TurnierId == turnierId)
@@ -129,9 +131,9 @@ namespace KlaskApi.Controllers
                     TeilnehmerId = td.TeilnehmerId,
                     Vorname = td.Vorname,
                     RundeBezeichnung = td.RundeBezeichnung,
-                    AnzahlSpiele = GetAnzahlSpiele(td.TeilnehmerId, td.GruppeId),
-                    AnzahlSiege = GetAnzahlSiege(td.TeilnehmerId, td.GruppeId),
-                    SatzDifferenz = GetSatzDifferenz(td.TeilnehmerId, td.GruppeId)
+                    AnzahlSpiele = GetAnzahlSpiele(td.TeilnehmerId, td.GruppeId, turnierId),
+                    AnzahlSiege = GetAnzahlSiege(td.TeilnehmerId, td.GruppeId, turnierId),
+                    SatzDifferenz = GetSatzDifferenz(td.TeilnehmerId, td.GruppeId, turnierId)
                 }).ToList();
 
                 return result;
@@ -168,6 +170,7 @@ namespace KlaskApi.Controllers
                         j => j.Teilnehmer.TeilnehmerId,
                         tt => tt.TeilnehmerId,
                         (j, tt) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, TurnierTeilnehmer = tt })
+                        .Where(j => j.TurnierTeilnehmer.TurnierId == turnierId)
                     .Join(_context.Gruppen,
                         j => j.TurnierTeilnehmer.GruppeId,
                         g => g.GruppeId,
@@ -233,6 +236,7 @@ namespace KlaskApi.Controllers
                         j => j.Teilnehmer.TeilnehmerId,
                         tt => tt.TeilnehmerId,
                         (j, tt) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, TurnierTeilnehmer = tt })
+                        .Where(j => j.TurnierTeilnehmer.TurnierId == activeTurnier.Id)
                     .Join(_context.Gruppen,
                         j => j.TurnierTeilnehmer.GruppeId,
                         g => g.GruppeId,
@@ -288,6 +292,7 @@ namespace KlaskApi.Controllers
                     .Join(_context.Spiele, st => st.SpielId, s => s.SpielId, (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
                     .Join(_context.Teilnehmer, j => j.SpieleTeilnehmer.TeilnehmerId, tn => tn.TeilnehmerId, (j, tn) => new { j.SpieleTeilnehmer, j.Spiel, Teilnehmer = tn })
                     .Join(_context.TurniereTeilnehmer, j => j.Teilnehmer.TeilnehmerId, tt => tt.TeilnehmerId, (j, tt) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, TurnierTeilnehmer = tt })
+                    .Where(j => j.TurnierTeilnehmer.TurnierId == activeTurnier.Id)
                     .Join(_context.Gruppen, j => j.TurnierTeilnehmer.GruppeId, g => g.GruppeId, (j, g) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, Gruppe = g })
                     .Join(_context.Runden, j => j.Spiel.RundeId, r => r.RundeId, (j, r) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, j.Gruppe, Runde = r })
                     .Where(j => j.Runde.RundeBezeichnung.Contains("Vorrunde") && j.Runde.TurnierId == activeTurnier.Id)
@@ -313,9 +318,9 @@ namespace KlaskApi.Controllers
                     TeilnehmerId = td.TeilnehmerId,
                     Vorname = td.Vorname,
                     RundeBezeichnung = td.RundeBezeichnung,
-                    AnzahlSpiele = GetAnzahlSpiele(td.TeilnehmerId, td.GruppeId),
-                    AnzahlSiege = GetAnzahlSiege(td.TeilnehmerId, td.GruppeId),
-                    SatzDifferenz = GetSatzDifferenz(td.TeilnehmerId, td.GruppeId)
+                    AnzahlSpiele = GetAnzahlSpiele(td.TeilnehmerId, td.GruppeId, activeTurnier.Id),
+                    AnzahlSiege = GetAnzahlSiege(td.TeilnehmerId, td.GruppeId, activeTurnier.Id),
+                    SatzDifferenz = GetSatzDifferenz(td.TeilnehmerId, td.GruppeId, activeTurnier.Id)
                 }).ToList();
 
                 return result;
@@ -328,17 +333,10 @@ namespace KlaskApi.Controllers
         }
 
         // Define helper methods to calculate AnzahlSpiele, AnzahlSiege, and SatzDifferenz
-        private long GetAnzahlSpiele(long teilnehmerId, long gruppeId)
+        private long GetAnzahlSpiele(long teilnehmerId, long gruppeId, long turnierId)
         {
             try
             {
-                // Count the number of games played by the participant in the group
-                /*var anzahlSpiele = _context.SpieleTeilnehmer
-                    .Where(st => st.TeilnehmerId == teilnehmerId)
-                    .Join(_context.Spiele, st => st.SpielId, s => s.SpielId, (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
-                    .Join(_context.TurniereTeilnehmer, j => j.SpieleTeilnehmer.TeilnehmerId, tt => tt.TeilnehmerId, (j, tt) => new { j.SpieleTeilnehmer, j.Spiel, TurnierTeilnehmer = tt })
-                    .Where(j => j.TurnierTeilnehmer.GruppeId == gruppeId && j.SpieleTeilnehmer.Punkte != null)
-                    .Count();*/
 
                 // Get groups, participants, and games for the active turnier
                 var anzahlSpiele = _context.SpieleTeilnehmer
@@ -346,9 +344,10 @@ namespace KlaskApi.Controllers
                     .Join(_context.Spiele, st => st.SpielId, s => s.SpielId, (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
                     .Join(_context.Teilnehmer, j => j.SpieleTeilnehmer.TeilnehmerId, tn => tn.TeilnehmerId, (j, tn) => new { j.SpieleTeilnehmer, j.Spiel, Teilnehmer = tn })
                     .Join(_context.TurniereTeilnehmer, j => j.Teilnehmer.TeilnehmerId, tt => tt.TeilnehmerId, (j, tt) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, TurnierTeilnehmer = tt })
+                    .Where(j => j.TurnierTeilnehmer.TurnierId == turnierId)
                     .Join(_context.Gruppen, j => j.TurnierTeilnehmer.GruppeId, g => g.GruppeId, (j, g) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, Gruppe = g })
                     .Join(_context.Runden, j => j.Spiel.RundeId, r => r.RundeId, (j, r) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, j.Gruppe, Runde = r })
-                    .Where(j => j.Runde.RundeBezeichnung.Contains("Vorrunde") && j.TurnierTeilnehmer.GruppeId == gruppeId && j.SpieleTeilnehmer.Punkte != null)
+                    .Where(j => j.Runde.RundeBezeichnung.Contains("Vorrunde") && j.Runde.TurnierId == turnierId && j.TurnierTeilnehmer.GruppeId == gruppeId && j.SpieleTeilnehmer.Punkte != null)
                     .Count();
 
                 return anzahlSpiele;
@@ -362,29 +361,19 @@ namespace KlaskApi.Controllers
         }
 
 
-        private int GetAnzahlSiege(long teilnehmerId, long gruppeId)
+        private int GetAnzahlSiege(long teilnehmerId, long gruppeId, long turnierId)
         {
             try
             {
-                // Count the number of victories by the participant in the group
-                /*var anzahlSiege = _context.SpieleTeilnehmer
-                    .Where(st => st.TeilnehmerId == teilnehmerId)
-                    .Join(_context.Spiele, st => st.SpielId, s => s.SpielId, (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
-                    .Join(_context.Teilnehmer, j => j.SpieleTeilnehmer.TeilnehmerId, tn => tn.TeilnehmerId, (j, tn) => new { j.SpieleTeilnehmer, j.Spiel, Teilnehmer = tn })
-                    .Join(_context.TurniereTeilnehmer, j => j.SpieleTeilnehmer.TeilnehmerId, tt => tt.TeilnehmerId, (j, tt) => new { j.SpieleTeilnehmer, j.Spiel, TurnierTeilnehmer = tt })
-                    .Where(j => j.TurnierTeilnehmer.GruppeId == gruppeId && j.SpieleTeilnehmer.Punkte != null)
-                    .Join(_context.SpieleTeilnehmer, j => j.Spiel.SpielId, opp => opp.SpielId, (j, opp) => new { j.SpieleTeilnehmer, Opponent = opp })
-                    .Where(j => j.Opponent.Punkte != null && j.SpieleTeilnehmer.Punkte > j.Opponent.Punkte)
-                    .Count();=> Error: counts Siege from all Runde (Gruppenvorrunde, Vorrunde)*/
-
                 var anzahlSiege = _context.SpieleTeilnehmer
                .Where(st => st.TeilnehmerId == teilnehmerId)
                .Join(_context.Spiele, st => st.SpielId, s => s.SpielId, (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
                .Join(_context.Teilnehmer, j => j.SpieleTeilnehmer.TeilnehmerId, tn => tn.TeilnehmerId, (j, tn) => new { j.SpieleTeilnehmer, j.Spiel, Teilnehmer = tn })
                .Join(_context.TurniereTeilnehmer, j => j.Teilnehmer.TeilnehmerId, tt => tt.TeilnehmerId, (j, tt) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, TurnierTeilnehmer = tt })
+               .Where(j => j.TurnierTeilnehmer.TurnierId == turnierId)
                .Join(_context.Gruppen, j => j.TurnierTeilnehmer.GruppeId, g => g.GruppeId, (j, g) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, Gruppe = g })
                .Join(_context.Runden, j => j.Spiel.RundeId, r => r.RundeId, (j, r) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, j.Gruppe, Runde = r })
-               .Where(j => j.Runde.RundeBezeichnung.Contains("Vorrunde") && j.TurnierTeilnehmer.GruppeId == gruppeId && j.SpieleTeilnehmer.Punkte != null)
+               .Where(j => j.Runde.RundeBezeichnung.Contains("Vorrunde") && j.Runde.TurnierId == turnierId && j.TurnierTeilnehmer.GruppeId == gruppeId && j.SpieleTeilnehmer.Punkte != null)
                 /*Count only Spiele from the Gruppenvoorunde*/
                 .Join(_context.SpieleTeilnehmer, j => j.Spiel.SpielId, opp => opp.SpielId, (j, opp) => new { j.SpieleTeilnehmer, Opponent = opp })
                 .Where(j => j.Opponent.Punkte != null && j.SpieleTeilnehmer.Punkte > j.Opponent.Punkte)
@@ -400,28 +389,19 @@ namespace KlaskApi.Controllers
             }
         }
 
-        private long GetSatzDifferenz(long teilnehmerId, long gruppeId)
+        private long GetSatzDifferenz(long teilnehmerId, long gruppeId, long turnierId)
         {
             try
             {
-                // Calculate the set difference by the participant in the group
-                /*var satzDifferenz = _context.SpieleTeilnehmer
-                    .Where(st => st.TeilnehmerId == teilnehmerId)
-                    .Join(_context.Spiele, st => st.SpielId, s => s.SpielId, (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
-                    .Join(_context.TurniereTeilnehmer, j => j.SpieleTeilnehmer.TeilnehmerId, tt => tt.TeilnehmerId, (j, tt) => new { j.SpieleTeilnehmer, j.Spiel, TurnierTeilnehmer = tt })
-                    .Where(j => j.TurnierTeilnehmer.GruppeId == gruppeId && j.SpieleTeilnehmer.Punkte != null)
-                    .Join(_context.SpieleTeilnehmer, j => j.Spiel.SpielId, opp => opp.SpielId, (j, opp) => new { j.SpieleTeilnehmer, Opponent = opp })
-                    .Where(j => j.Opponent.Punkte != null)
-                    .Sum(j => (j.SpieleTeilnehmer.Punkte - j.Opponent.Punkte).GetValueOrDefault());*/
-
                 var satzDifferenz = _context.SpieleTeilnehmer
                 .Where(st => st.TeilnehmerId == teilnehmerId)
                 .Join(_context.Spiele, st => st.SpielId, s => s.SpielId, (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
                 .Join(_context.Teilnehmer, j => j.SpieleTeilnehmer.TeilnehmerId, tn => tn.TeilnehmerId, (j, tn) => new { j.SpieleTeilnehmer, j.Spiel, Teilnehmer = tn })
                 .Join(_context.TurniereTeilnehmer, j => j.Teilnehmer.TeilnehmerId, tt => tt.TeilnehmerId, (j, tt) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, TurnierTeilnehmer = tt })
+                .Where(j => j.TurnierTeilnehmer.TurnierId == turnierId)
                 .Join(_context.Gruppen, j => j.TurnierTeilnehmer.GruppeId, g => g.GruppeId, (j, g) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, Gruppe = g })
                 .Join(_context.Runden, j => j.Spiel.RundeId, r => r.RundeId, (j, r) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, j.Gruppe, Runde = r })
-                .Where(j => j.Runde.RundeBezeichnung.Contains("Vorrunde") && j.TurnierTeilnehmer.GruppeId == gruppeId && j.SpieleTeilnehmer.Punkte != null)
+                .Where(j => j.Runde.RundeBezeichnung.Contains("Vorrunde") && j.Runde.TurnierId == turnierId && j.TurnierTeilnehmer.GruppeId == gruppeId && j.SpieleTeilnehmer.Punkte != null)
                 .Join(_context.SpieleTeilnehmer, j => j.Spiel.SpielId, opp => opp.SpielId, (j, opp) => new { j.SpieleTeilnehmer, Opponent = opp })
                 .Where(j => j.Opponent.Punkte != null)
                  .Sum(j => (j.SpieleTeilnehmer.Punkte - j.Opponent.Punkte).GetValueOrDefault());
@@ -465,6 +445,7 @@ namespace KlaskApi.Controllers
                         j => j.Teilnehmer.TeilnehmerId,
                         tt => tt.TeilnehmerId,
                         (j, tt) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, TurnierTeilnehmer = tt })
+                        .Where(j => j.TurnierTeilnehmer.TurnierId == activeTurnier.Id)
                     .Join(_context.Gruppen,
                         j => j.TurnierTeilnehmer.GruppeId,
                         g => g.GruppeId,
