@@ -145,6 +145,71 @@ namespace KlaskApi.Controllers
             }
         }
 
+        [HttpGet("spielUmDrittenDetailsHistorie/{turnierId}")]
+        public async Task<ActionResult<object>> SpielUmDrittenDetailsHistorie(long turnierId)
+        {
+            try
+            {
+                // Get the active turnier
+                var requestedTurnier = await _context.Turniere.FirstOrDefaultAsync(t => t.Id == turnierId);
+                if (requestedTurnier == null)
+                {
+                    return NotFound("No active turnier found.");
+                }
+                // Get groups, participants, and games for the active turnier and second largest RundeId
+                var turnierDetails = await _context.SpieleTeilnehmer
+                    .Join(_context.Spiele,
+                        st => st.SpielId,
+                        s => s.SpielId,
+                        (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
+                    .Join(_context.Teilnehmer,
+                        j => j.SpieleTeilnehmer.TeilnehmerId,
+                        tn => tn.TeilnehmerId,
+                        (j, tn) => new { j.SpieleTeilnehmer, j.Spiel, Teilnehmer = tn })
+                    .Join(_context.TurniereTeilnehmer,
+                        j => j.Teilnehmer.TeilnehmerId,
+                        tt => tt.TeilnehmerId,
+                        (j, tt) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, TurnierTeilnehmer = tt })
+                        .Where(j => j.TurnierTeilnehmer.TurnierId == turnierId)
+                    .Join(_context.Gruppen,
+                        j => j.TurnierTeilnehmer.GruppeId,
+                        g => g.GruppeId,
+                        (j, g) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, Gruppe = g })
+                    .Join(_context.Runden,
+                        j => j.Spiel.RundeId,
+                        r => r.RundeId,
+                        (j, r) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, j.Gruppe, Runde = r })
+                     /*.Where(j => j.Runde.RundeId == 172) works as expected*/
+                     //.Where(j => j.Runde.RundeId == secondLargestRundeId)
+                     .Where(j => j.Runde.RundeBezeichnung.Contains("SpielUmDritten") && j.Runde.TurnierId == turnierId)
+                    .Join(_context.Turniere,
+                        j => j.Runde.TurnierId,
+                        t => t.Id,
+                        (j, t) => new
+                        {
+                            TeilnehmerId = j.Teilnehmer.TeilnehmerId,
+                            Vorname = j.Teilnehmer.Vorname,
+                            SpielTeilnehmerId = j.SpieleTeilnehmer.SpielTeilnehmerId,
+                            Punkte = j.SpieleTeilnehmer.Punkte,
+                            GruppeId = j.Gruppe.GruppeId,
+                            Gruppenname = j.Gruppe.Gruppenname,
+                            RundeId = j.Runde.RundeId,
+                            RundeBezeichnung = j.Runde.RundeBezeichnung,
+                            TurnierTitel = t.TurnierTitel,
+                            SpielId = j.Spiel.SpielId
+                        })
+                    .ToListAsync();
+                return turnierDetails;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in VorrundenDetails: {ex.Message}");
+                return StatusCode(500, $"Internal Server Error: {ex.Message}");
+            }
+        }
+
+
+
         [HttpGet("finaleDetailsHistorie/{turnierId}")]
         public async Task<ActionResult<object>> FinaleDetailsHistorie(long turnierId)
         {
@@ -273,6 +338,71 @@ namespace KlaskApi.Controllers
                 return StatusCode(500, $"Internal Server Error: {ex.Message}");
             }
         }
+
+        [HttpGet("spielUmDrittenDetails")]
+        public async Task<ActionResult<object>> SpielUmDrittenDetails()
+        {
+            try
+            {
+                // Get the active turnier
+                var activeTurnier = await _context.Turniere.FirstOrDefaultAsync(t => t.IsActive);
+                if (activeTurnier == null)
+                {
+                    return NotFound("No active turnier found.");
+                }
+                // Get groups, participants, and games for the active turnier and second largest RundeId
+                var turnierDetails = await _context.SpieleTeilnehmer
+                    .Join(_context.Spiele,
+                        st => st.SpielId,
+                        s => s.SpielId,
+                        (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
+                    .Join(_context.Teilnehmer,
+                        j => j.SpieleTeilnehmer.TeilnehmerId,
+                        tn => tn.TeilnehmerId,
+                        (j, tn) => new { j.SpieleTeilnehmer, j.Spiel, Teilnehmer = tn })
+                    .Join(_context.TurniereTeilnehmer,
+                        j => j.Teilnehmer.TeilnehmerId,
+                        tt => tt.TeilnehmerId,
+                        (j, tt) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, TurnierTeilnehmer = tt })
+                        .Where(j => j.TurnierTeilnehmer.TurnierId == activeTurnier.Id)
+                    .Join(_context.Gruppen,
+                        j => j.TurnierTeilnehmer.GruppeId,
+                        g => g.GruppeId,
+                        (j, g) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, Gruppe = g })
+                    .Join(_context.Runden,
+                        j => j.Spiel.RundeId,
+                        r => r.RundeId,
+                        (j, r) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, j.Gruppe, Runde = r })
+                     /*.Where(j => j.Runde.RundeId == 172) works as expected*/
+                     //.Where(j => j.Runde.RundeId == secondLargestRundeId)
+                     .Where(j => j.Runde.RundeBezeichnung.Contains("SpielUmDritten") && j.Runde.TurnierId == activeTurnier.Id)
+                    .Join(_context.Turniere,
+                        j => j.Runde.TurnierId,
+                        t => t.Id,
+                        (j, t) => new
+                        {
+                            TeilnehmerId = j.Teilnehmer.TeilnehmerId,
+                            Vorname = j.Teilnehmer.Vorname,
+                            SpielTeilnehmerId = j.SpieleTeilnehmer.SpielTeilnehmerId,
+                            Punkte = j.SpieleTeilnehmer.Punkte,
+                            GruppeId = j.Gruppe.GruppeId,
+                            Gruppenname = j.Gruppe.Gruppenname,
+                            RundeId = j.Runde.RundeId,
+                            RundeBezeichnung = j.Runde.RundeBezeichnung,
+                            TurnierTitel = t.TurnierTitel,
+                            SpielId = j.Spiel.SpielId
+                        })
+                    .ToListAsync();
+                return turnierDetails;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in VorrundenDetails: {ex.Message}");
+                return StatusCode(500, $"Internal Server Error: {ex.Message}");
+            }
+        }
+
+
 
 
         [HttpGet("vorrundenResults")]
@@ -499,14 +629,24 @@ namespace KlaskApi.Controllers
                 var finaleService = new StartFinaleService(_context);
                 var createdFinale = await finaleService.FinaleTeilnehmer(turnierId);
 
+                var spielUmDritten = new StartSpielUmDrittenService(_context);
+                var createdSpielUmDritten = await spielUmDritten.SpielUmDrittenTeilnehmer(turnierId);
+
                 if (!createdFinale)
                 {
                     // Handle the case where grouping failed
                     return BadRequest("Finale failed. Check your data.");
                 }
 
+                if (!createdSpielUmDritten)
+                {
+                    // Handle the case where grouping failed
+                    return BadRequest("Spiel um Dritten failed. Check your data.");
+                }
+
+
                 // Return success response or createdGroups if needed
-                return Ok(createdFinale);
+                return Ok(createdFinale && createdSpielUmDritten);
             }
             catch (Exception ex)
             {

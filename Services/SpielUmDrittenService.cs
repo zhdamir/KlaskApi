@@ -8,21 +8,21 @@ using KlaskApi.Models;
 
 namespace KlaskApi.Services
 {
-    public class StartFinaleService
+    public class StartSpielUmDrittenService
     {
         private readonly TurnierContext _context;// to interact with database
 
-        public StartFinaleService(TurnierContext context)
+        public StartSpielUmDrittenService(TurnierContext context)
         {
             _context = context;
         }
 
-        public async Task<bool> FinaleTeilnehmer(long turnierId)
+        public async Task<bool> SpielUmDrittenTeilnehmer(long turnierId)
         {
             Console.WriteLine(turnierId);
             try
             {
-                List<Teilnehmer> bestTeilnehmer = GetBestVorrundeTeilnehmer(turnierId);
+                List<Teilnehmer> bestTeilnehmer = GetSecondBestVorrundeTeilnehmer(turnierId);
                 Console.WriteLine("Heeeeeey teilneeeeeeehmeeeer! " + bestTeilnehmer.ToString() + "The number of Teilnehmer is: " + bestTeilnehmer.Count + " persons");
 
 
@@ -77,7 +77,7 @@ namespace KlaskApi.Services
         {
             var Finale = new Runde
             {
-                RundeBezeichnung = "Finale",
+                RundeBezeichnung = "SpielUmDritten",
                 TurnierId = turnierId,
             };
             _context.Runden.Add(Finale);
@@ -109,7 +109,7 @@ namespace KlaskApi.Services
 
 
 
-        private List<Teilnehmer> GetBestVorrundeTeilnehmer(long turnierId)
+        private List<Teilnehmer> GetSecondBestVorrundeTeilnehmer(long turnierId)
         {
             try
             {
@@ -145,6 +145,7 @@ namespace KlaskApi.Services
                         BestSatzDifferenz = group.Max(j => j.SatzDifferenz)
                     })
                     .OrderByDescending(entry => entry.BestSatzDifferenz)
+                    .Skip(2)
                     .Take(2)
                     .Select(entry => entry.TeilnehmerId)
                     .ToList();
