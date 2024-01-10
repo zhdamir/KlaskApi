@@ -11,27 +11,40 @@ namespace KlaskApi.Services
     {
         private readonly TurnierContext _context;// to interact with database
 
+        /// <summary>
+        /// Initialisiert eine neue Instanz des TeilnehmerGroupingService.
+        /// </summary>
+        /// <param name="context">Der Datenkontext für das Turnier.</param>
         public TeilnehmerGroupingService(TurnierContext context)
         {
             _context = context;
         }
+
+        /// <summary>
+        /// Gruppiert die Teilnehmer für ein bestimmtes Turnier.
+        /// </summary>
+        /// <param name="turnierId">Die ID des Turniers.</param>
+        /// <returns>Liste der erstellten Gruppen oder null bei Fehlern.</returns>
         public async Task<List<Gruppe>> GroupTeilnehmer(long turnierId)
         {
             Console.WriteLine(turnierId);
             try
             {
+                // Abrufen der Liste der Turnier-Teilnehmer
                 var turnierTeilnehmerList = await _context.TurniereTeilnehmer
                     .Where(tt => tt.TurnierId == turnierId)
                     .ToListAsync();
                 Console.WriteLine(turnierTeilnehmerList);
                 Console.WriteLine(turnierId);
 
+                // Überprüfen, ob Teilnehmer vorhanden sind
                 if (turnierTeilnehmerList == null || turnierTeilnehmerList.Count == 0)
                 {
                     Console.WriteLine($"No Teilnehmer found for TurnierId: {turnierId}");
                     return null;
                 }
 
+                // Abrufen der Anzahl der Gruppen für das Turnier
                 var numberOfGroups = (int)_context.Turniere.FirstOrDefault(t => t.Id == turnierId)?.AnzahlGruppen;
                 Console.WriteLine($"Number of Groups HEYY it works until here: {numberOfGroups}" + " Turnier Id is " + turnierId + " AAAND turnierTeilnehmerList is " + turnierTeilnehmerList.Count);
 
@@ -41,6 +54,7 @@ namespace KlaskApi.Services
                     return null;
                 }
 
+                // Gruppen erstellen und zuweisen
                 var createdGroups = GenerateAndAssignGroups(numberOfGroups, turnierTeilnehmerList);
 
                 if (createdGroups == null || createdGroups.Count != numberOfGroups)
@@ -49,7 +63,7 @@ namespace KlaskApi.Services
                     return null;
                 }
 
-                //Create Gruppenvorrunde
+                // Gruppenvorrunde erstellen
                 var createdGruppenRunde = GenerateGruppenRunde(turnierId);
                 if (createdGruppenRunde == null)
                 {
@@ -59,7 +73,7 @@ namespace KlaskApi.Services
                 await _context.SaveChangesAsync();
 
 
-                //Create Spiele für Gruppenrunde
+                // Spiele für Gruppenrunde erstellen
                 var rundeId = createdGruppenRunde.RundeId;
                 var createdGruppenSpiele = GenerateGruppenRundeSpiele(rundeId, turnierTeilnehmerList);
                 if (createdGruppenSpiele == null)
@@ -69,6 +83,7 @@ namespace KlaskApi.Services
                 }
                 await _context.SaveChangesAsync();
 
+                // SpielTeilnehmer für Gruppenrunde erstellen
                 var createdSpielTeilnehmer = GenerateSpielTeilnehmer(rundeId, turnierTeilnehmerList, createdGruppenSpiele);
                 if (createdSpielTeilnehmer == null)
                 {
@@ -87,13 +102,21 @@ namespace KlaskApi.Services
             }
         }
 
+        /// <summary>
+        /// Methode zum Generieren von SpielTeilnehmer-Entitäten basierend auf Teilnehmern in einer Gruppe.
+        /// </summary>
+        /// <param name="rundeId">Die ID der Runde, zu der die Spiele gehören.</param>
+        /// <param name="teilnehmerList">Die Liste der Turnier-Teilnehmer in der Gruppe.</param>
+        /// <param name="spieleList">Die Liste der Spiele für die Gruppenvorrunde.</param>
+        /// <returns>Die Liste der erstellten SpielTeilnehmer-Entitäten.</returns>
         private List<SpielTeilnehmer> GenerateSpielTeilnehmer(long rundeId, List<TurnierTeilnehmer> teilnehmerList, List<Spiel> spieleList)
         {
             var spieleTeilnehmerList = new List<SpielTeilnehmer>();
-            // Generate unique SpielIds for the current group
+            // Eindeutige SpielIds für die aktuelle Gruppe generieren
             var uniqueSpielIds = spieleList.Where(s => s.RundeId == rundeId).Select(s => s.SpielId).Distinct().ToList();
-            // Logic to generate Spiele based on Teilnehmer in each group
-            // Assuming each Teilnehmer in a group plays with all other Teilnehmer in the same group
+
+            // Logik zum Generieren von SpielTeilnehmer-Entitäten basierend auf Teilnehmern in jeder Gruppe
+            // Es wird angenommen, dass jeder Teilnehmer in einer Gruppe gegen alle anderen Teilnehmer in derselben Gruppe spielt
             foreach (var gruppeId in teilnehmerList.Select(tt => tt.GruppeId).Distinct())
             {
                 var gruppeTeilnehmer = teilnehmerList.Where(tt => tt.GruppeId == gruppeId).ToList();
@@ -103,12 +126,12 @@ namespace KlaskApi.Services
                     for (int j = i + 1; j < gruppeTeilnehmer.Count; j++)
                     {
 
-                        // Pick the next unique SpielId for the current group
+                        // Nächste eindeutige SpielId für die aktuelle Gruppe auswählen
                         var spielId = uniqueSpielIds.FirstOrDefault();
 
-                        if (spielId != 0) // Check if there's a valid SpielId
+                        if (spielId != 0) // Überprüfen, ob eine gültige SpielId vorhanden ist
                         {
-                            // Create SpielTeilnehmer entities for the pair
+                            // SpielTeilnehmer-Entitäten für das Paar erstellen
                             var spielTeilnehmer1 = new SpielTeilnehmer
                             {
                                 SpielId = spielId,
@@ -123,14 +146,14 @@ namespace KlaskApi.Services
                                 Punkte = null,
                             };
 
-                            // Add the SpielTeilnehmer entities to the list
+                            // SpielTeilnehmer-Entitäten zur Liste hinzufügen
                             spieleTeilnehmerList.Add(spielTeilnehmer1);
                             spieleTeilnehmerList.Add(spielTeilnehmer2);
 
-                            // Remove the used SpielId from the list
+                            // Verwendete SpielId aus der Liste entfernen
                             uniqueSpielIds.Remove(spielId);
 
-                            // Add SpielTeilnehmer entities to the context
+                            // SpielTeilnehmer-Entitäten zum Kontext hinzufügen
                             _context.SpieleTeilnehmer.Add(spielTeilnehmer1);
                             _context.SpieleTeilnehmer.Add(spielTeilnehmer2);
                         }
@@ -141,13 +164,19 @@ namespace KlaskApi.Services
             return spieleTeilnehmerList;
         }
 
+        /// <summary>
+        /// Methode zum Generieren von Spiel-Entitäten für eine Gruppenrunde basierend auf den Teilnehmern in einer Gruppe.
+        /// </summary>
+        /// <param name="rundeId">Die ID der Runde, zu der die Spiele gehören.</param>
+        /// <param name="teilnehmerList">Die Liste der Turnier-Teilnehmer in der Gruppe.</param>
+        /// <returns>Die Liste der erstellten Spiel-Entitäten für die Gruppenrunde.</returns>
         private List<Spiel> GenerateGruppenRundeSpiele(long rundeId, List<TurnierTeilnehmer> teilnehmerList)
         {
 
             var spieleList = new List<Spiel>();
 
-            // Logic to generate Spiele based on Teilnehmer in each group
-            // Assuming each Teilnehmer in a group plays with all other Teilnehmer in the same group
+            // Logik zum Generieren von Spiel-Entitäten basierend auf Teilnehmern in jeder Gruppe
+            // jeder Teilnehmer in einer Gruppe spielt gegen alle anderen Teilnehmer in derselben Gruppe 
             foreach (var gruppeId in teilnehmerList.Select(tt => tt.GruppeId).Distinct())
             {
                 var gruppeTeilnehmer = teilnehmerList.Where(tt => tt.GruppeId == gruppeId).ToList();
@@ -156,7 +185,7 @@ namespace KlaskApi.Services
                 {
                     for (int j = i + 1; j < gruppeTeilnehmer.Count; j++)
                     {
-                        // Create a Spiel for each pair of Teilnehmer in the group
+                        // Spiel-Entität für jedes Paar von Teilnehmern in der Gruppe erstellen
                         var spiel = new Spiel
                         {
                             RundeId = rundeId,
@@ -169,12 +198,14 @@ namespace KlaskApi.Services
                 }
             }
 
-
-
             return spieleList;
         }
 
-        //Method to create Gruppenvorrunde
+        /// <summary>
+        /// Methode zum Erstellen einer Runde für die Gruppenvorrunde.
+        /// </summary>
+        /// <param name="turnierId">Die ID des Turniers.</param>
+        /// <returns>Die erstellte Runde für die Gruppenvorrunde.</returns>
         private Runde GenerateGruppenRunde(long turnierId)
         {
             var gruppenRunde = new Runde
@@ -186,12 +217,17 @@ namespace KlaskApi.Services
             return gruppenRunde;
         }
 
-
+        /// <summary>
+        /// Methode zum Generieren und Zuweisen von Gruppen für Teilnehmer.
+        /// </summary>
+        /// <param name="numberOfGroups">Die Anzahl der zu generierenden Gruppen.</param>
+        /// <param name="teilnehmerList">Die Liste der Turnier-Teilnehmer.</param>
+        /// <returns>Die Liste der erstellten Gruppen.</returns>
         private List<Gruppe> GenerateAndAssignGroups(int numberOfGroups, List<TurnierTeilnehmer> teilnehmerList)
         {
             var groups = new List<Gruppe>();
 
-            // Create and add groups to the Gruppen table
+            // Erstellen und Hinzufügen von Gruppen zur Tabelle Gruppen
             for (int i = 1; i <= numberOfGroups; i++)
             {
                 var gruppe = new Gruppe
@@ -204,27 +240,24 @@ namespace KlaskApi.Services
                 _context.Gruppen.Add(gruppe);
             }
 
-            // Save changes to persist the newly created groups
+            // Änderungen speichern, um die neu erstellten Gruppen zu persistieren
             _context.SaveChanges();
 
-            // Shuffle the teilnehmerList randomly
+            // Die Teilnehmerliste zufällig mischen
             var shuffledTeilnehmer = teilnehmerList.OrderBy(x => Guid.NewGuid()).ToList();
 
-            // Assign GruppeIds to the TurnierTeilnehmer instances
+            // GruppeIds den TurnierTeilnehmer-Instanzen zuweisen
             for (int i = 0; i < shuffledTeilnehmer.Count; i++)
             {
                 var gruppe = groups[i % numberOfGroups];
                 shuffledTeilnehmer[i].GruppeId = gruppe.GruppeId;
             }
 
-            // Save changes to persist the assigned GruppeIds
+            // Änderungen speichern, um die zugewiesenen GruppeIds zu persistieren
             _context.SaveChanges();
 
             return groups;
         }
-
-
-
 
     }
 }

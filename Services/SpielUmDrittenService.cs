@@ -12,18 +12,27 @@ namespace KlaskApi.Services
     {
         private readonly TurnierContext _context;// to interact with database
 
+        /// <summary>
+        /// Initialisiert eine neue Instanz des <see cref="StartSpielUmDrittenService"/> mit dem angegebenen Datenbankkontext.
+        /// </summary>
+        /// <param name="context">Der Datenbankkontext für das Turnier.</param>
         public StartSpielUmDrittenService(TurnierContext context)
         {
             _context = context;
         }
 
+        /// <summary>
+        /// Führt das Spiel um den dritten Platz für das angegebene Turnier durch.
+        /// </summary>
+        /// <param name="turnierId">Die ID des Turniers, für das das Spiel um den dritten Platz durchgeführt werden soll.</param>
+        /// <returns>True, wenn das Spiel erfolgreich durchgeführt wurde; andernfalls false.</returns>
         public async Task<bool> SpielUmDrittenTeilnehmer(long turnierId)
         {
             Console.WriteLine(turnierId);
             try
             {
+                // Hole die Teilnehmer mit der zweitbesten Platzierung aus der Vorrunde
                 List<Teilnehmer> bestTeilnehmer = GetSecondBestVorrundeTeilnehmer(turnierId);
-                Console.WriteLine("Heeeeeey teilneeeeeeehmeeeer! " + bestTeilnehmer.ToString() + "The number of Teilnehmer is: " + bestTeilnehmer.Count + " persons");
 
 
                 if (bestTeilnehmer == null)
@@ -31,7 +40,8 @@ namespace KlaskApi.Services
                     Console.WriteLine("Teilnehmer is null!!!!");
                     return false;
                 }
-                //Create Gruppenvorrunde
+
+                // "SpielUmDritten" Runde erstellen
                 var createdFinale = GenerateFinale(turnierId);
 
                 if (createdFinale == null)
@@ -42,8 +52,6 @@ namespace KlaskApi.Services
                 }
                 await _context.SaveChangesAsync();
 
-
-                //Create Spiele für Vorrunde
                 var rundeId = createdFinale.RundeId;
                 var createdFinaleSpiele = GenerateFinaleSpiele(rundeId);
                 if (createdFinaleSpiele == null)
@@ -72,7 +80,11 @@ namespace KlaskApi.Services
             }
         }
 
-        //Method to create Gruppenvorrunde
+        /// <summary>
+        /// Erstellt die Runde für das Spiel um den dritten Platz.
+        /// </summary>
+        /// <param name="turnierId">Die ID des Turniers, für das die Runde erstellt werden soll.</param>
+        /// <returns>Die erstellte Runde für das Spiel um den dritten Platz.</returns>
         private Runde GenerateFinale(long turnierId)
         {
             var Finale = new Runde
@@ -84,6 +96,11 @@ namespace KlaskApi.Services
             return Finale;
         }
 
+        /// <summary>
+        /// Erstellt Spiele für das Spiel um den dritten Platz.
+        /// </summary>
+        /// <param name="rundeId">Die ID der Runde, für die Spiele erstellt werden sollen.</param>
+        /// <returns>Eine Liste von erstellten Spielen für das Spiel um den dritten Platz.</returns>
         private List<Spiel> GenerateFinaleSpiele(long rundeId)
         {
             var spieleList = new List<Spiel>();
@@ -108,7 +125,11 @@ namespace KlaskApi.Services
         }
 
 
-
+        /// <summary>
+        /// Ermittelt die Teilnehmer mit der zweitbesten Satzdifferenz in der Vorrunde.
+        /// </summary>
+        /// <param name="turnierId">Die ID des Turniers.</param>
+        /// <returns>Eine Liste von Teilnehmern mit der zweitbesten Satzdifferenz.</returns>
         private List<Teilnehmer> GetSecondBestVorrundeTeilnehmer(long turnierId)
         {
             try
@@ -162,7 +183,12 @@ namespace KlaskApi.Services
         }
 
 
-
+        /// <summary>
+        /// Ermittelt die Satzdifferenz für einen Teilnehmer in der Vorrunde.
+        /// </summary>
+        /// <param name="teilnehmerId">Die ID des Teilnehmers.</param>
+        /// <param name="turnierId">Die ID des Turniers.</param>
+        /// <returns>Die Satzdifferenz des Teilnehmers in der Vorrunde.</returns>
         private long GetSatzDifferenz(long teilnehmerId, long turnierId)
         {
             try
@@ -183,36 +209,43 @@ namespace KlaskApi.Services
             catch (Exception ex)
             {
                 Console.WriteLine($"Error in GetSatzDifferenz: {ex.Message}");
-                // Handle exceptions appropriately, e.g., log or throw
                 throw;
             }
         }
 
+        /// <summary>
+        /// Generiert SpielTeilnehmer-Entitäten für das Finale basierend auf den Teilnehmern und Spielen.
+        /// </summary>
+        /// <param name="rundeId">Die ID der Runde.</param>
+        /// <param name="teilnehmerList">Die Liste der Teilnehmer.</param>
+        /// <param name="spieleList">Die Liste der Spiele.</param>
+        /// <param name="turnierId">Die ID des Turniers.</param>
+        /// <returns>Liste von SpielTeilnehmer-Entitäten für das Finale.</returns>
         private List<SpielTeilnehmer> GenerateSpielTeilnehmerFinale(long rundeId, List<Teilnehmer> teilnehmerList, List<Spiel> spieleList, long turnierId)
         {
             var spieleTeilnehmerList = new List<SpielTeilnehmer>();
 
-            // Generate unique SpielIds for the current group
+            //eindeutige SpielIds generieren
             var uniqueSpielIds = spieleList.Where(s => s.RundeId == rundeId).Select(s => s.SpielId).Distinct().ToList();
 
-            // Check if there are enough unique SpielIds
+            // Überprüfe, ob genügend eindeutige SpielIds vorhanden sind
             if (uniqueSpielIds.Count < 2)
             {
                 Console.WriteLine("Error: Not enough unique SpielIds for matchups.");
                 return null;
             }
 
-            // Calculate SatzDifferenz for each Teilnehmer
+            //SatzDifferenz für jeden Teilnehmer berechenen
             var teilnehmerWithScores = teilnehmerList.Select(teilnehmer => new
             {
                 Teilnehmer = teilnehmer,
                 SatzDifferenz = GetSatzDifferenz(teilnehmer.TeilnehmerId, turnierId)
             });
 
-            // Sort Teilnehmer by SatzDifferenz in descending order
+            // Teilnehmer nach SatzDifferenz absteigend sortieren
             var sortedTeilnehmer = teilnehmerWithScores.OrderByDescending(entry => entry.SatzDifferenz).ToList();
 
-            // Create SpielTeilnehmer entities for first place matchup
+            // Erstelle SpielTeilnehmer-Entitäten für das Spiel um den ersten Platz
             var firstPlaceSpielId = uniqueSpielIds.FirstOrDefault();
 
             if (firstPlaceSpielId != 0)
@@ -240,7 +273,7 @@ namespace KlaskApi.Services
                 return null;
             }
 
-            // Create SpielTeilnehmer entities for third place matchup
+            // Erstelle SpielTeilnehmer-Entitäten für das Spiel um den dritten Platz
             var thirdPlaceSpielId = uniqueSpielIds.FirstOrDefault();
 
             if (thirdPlaceSpielId != 0)

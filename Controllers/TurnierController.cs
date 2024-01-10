@@ -16,16 +16,26 @@ namespace KlaskApi.Controllers
     {
         private readonly TurnierContext _context;
 
+        /// <summary>
+        /// KOnstruktor Initialisiert eine neue Instanz des TurnierControllers mit dem angegebenen Kontext.
+        /// </summary>
+        /// <param name="context">Der Kontext für die Turnierdatenbank.</param>
         public TurnierController(TurnierContext context)
         {
             _context = context;
         }
+
+        /// <summary>
+        /// Gibt Details zu einem ausgewählten Turnier basierend auf der angegebenen Turnier-ID zurück.
+        /// </summary>
+        /// <param name="turnierId">Die ID des ausgewählten Turniers.</param>
+        /// <returns>Details zum ausgewählten Turnier, einschließlich Gruppen und Teilnehmer.</returns>
         [HttpGet("selectedTurnierDetails/{turnierId}")]
         public async Task<ActionResult<object>> SelectedTurnierDetails(long turnierId)
         {
             try
             {
-                // Get the active turnier
+                // Das angeforderte Turnier abrufen
                 var requestedTurnier = await _context.Turniere.FirstOrDefaultAsync(t => t.Id == turnierId);
 
                 if (requestedTurnier == null)
@@ -33,7 +43,7 @@ namespace KlaskApi.Controllers
                     return NotFound("Turnier with Id " + turnierId + " not found.");
                 }
 
-                // Get groups and participants for the active turnier
+                // Gruppen und Teilnehmer für das ausgewählte Turnier abrufen
                 var turnierDetails = await _context.Gruppen
                     .Join(_context.TurniereTeilnehmer,
                         g => g.GruppeId,
@@ -52,7 +62,7 @@ namespace KlaskApi.Controllers
                         {
                             TeilnehmerId = j.Teilnehmer.TeilnehmerId,
                             Vorname = j.Teilnehmer.Vorname,
-                            // Add other properties as needed
+
                         }
                     })
                     .GroupBy(j => new { j.GruppeId, j.Gruppenname })
@@ -73,13 +83,17 @@ namespace KlaskApi.Controllers
             }
         }
 
-
+        /// <summary>
+        /// Gibt Historie-Details zu den Gruppenrunden eines ausgewählten Turniers basierend auf der angegebenen Turnier-ID zurück.
+        /// </summary>
+        /// <param name="turnierId">Die ID des ausgewählten Turniers.</param>
+        /// <returns>Historie-Details zu den Gruppenrunden des ausgewählten Turniers, einschließlich Gruppen, Teilnehmer und Spielen.</returns>
         [HttpGet("gruppenrundenDetailsHistorie/{turnierId}")]
         public async Task<ActionResult<object>> GruppenrundenDetailsHistorie(long turnierId)
         {
             try
             {
-                // Get the active turnier
+                // Das angeforderte Turnier abrufen
                 var requestedTurnier = await _context.Turniere.FirstOrDefaultAsync(t => t.Id == turnierId);
 
                 if (requestedTurnier == null)
@@ -87,7 +101,7 @@ namespace KlaskApi.Controllers
                     return NotFound("No  turnier found.");
                 }
 
-                // Get groups, participants, and games for the active turnier
+                // Gruppen, Teilnehmer und Spiele für das ausgewählte Turnier abrufen
                 var turnierDetails = await _context.SpieleTeilnehmer
                     .Join(_context.Spiele,
                         st => st.SpielId,
@@ -196,8 +210,11 @@ namespace KlaskApi.Controllers
         }
 
 
-
-
+        /// <summary>
+        /// Gibt Historie-Ergebnisse zu den Gruppenrunden eines ausgewählten Turniers basierend auf der angegebenen Turnier-ID zurück.
+        /// </summary>
+        /// <param name="turnierId">Die ID des ausgewählten Turniers.</param>
+        /// <returns>Historie-Ergebnisse zu den Gruppenrunden des ausgewählten Turniers, einschließlich Gruppen, Teilnehmer und Spielen.</returns>
         [HttpGet("gruppenrundenResults")]
         public async Task<ActionResult<object>> GruppenrundenResults()
         {
@@ -210,7 +227,7 @@ namespace KlaskApi.Controllers
                     return NotFound("No active turnier found.");
                 }
 
-                // Get groups, participants, and games for the active turnier
+                // Gruppen, Teilnehmer und Spiele für das ausgewählte Turnier abrufen
                 var turnierDetails = await _context.SpieleTeilnehmer
                     .Join(_context.Spiele, st => st.SpielId, s => s.SpielId, (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
                     .Join(_context.Teilnehmer, j => j.SpieleTeilnehmer.TeilnehmerId, tn => tn.TeilnehmerId, (j, tn) => new { j.SpieleTeilnehmer, j.Spiel, Teilnehmer = tn })
@@ -234,6 +251,7 @@ namespace KlaskApi.Controllers
                     })
                     .ToListAsync();
 
+                // Ergebnisse für jede Teilnehmer-Gruppenkombination abrufen
                 var result = turnierDetails.Distinct().Select(td => new
                 {
                     GruppeId = td.GruppeId,
@@ -255,13 +273,19 @@ namespace KlaskApi.Controllers
             }
         }
 
-        // Define helper methods to calculate AnzahlSpiele, AnzahlSiege, and SatzDifferenz
+        /// <summary>
+        /// Berechnet die Anzahl der Spiele für einen bestimmten Teilnehmer in einer bestimmten Gruppe und einem bestimmten Turnier.
+        /// </summary>
+        /// <param name="teilnehmerId">Die ID des Teilnehmers.</param>
+        /// <param name="gruppeId">Die ID der Gruppe.</param>
+        /// <param name="turnierId">Die ID des Turniers.</param>
+        /// <returns>Die Anzahl der Spiele für den angegebenen Teilnehmer, die Gruppe und das Turnier.</returns>
         private long GetAnzahlSpiele(long teilnehmerId, long gruppeId, long turnierId)
         {
             try
             {
 
-                // Get groups, participants, and games for the active turnier
+                // Spiele, Teilnehmer und Gruppen für das ausgewählte Turnier abrufen
                 var anzahlSpiele = _context.SpieleTeilnehmer
                     .Where(st => st.TeilnehmerId == teilnehmerId)
                     .Join(_context.Spiele, st => st.SpielId, s => s.SpielId, (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
@@ -278,12 +302,18 @@ namespace KlaskApi.Controllers
             catch (Exception ex)
             {
                 Console.WriteLine($"Error in GetAnzahlSpiele: {ex.Message}");
-                // Handle exceptions appropriately, e.g., log or throw
                 throw;
             }
         }
 
 
+        /// <summary>
+        /// Berechnet die Anzahl der Siege für einen bestimmten Teilnehmer in einer bestimmten Gruppe und einem bestimmten Turnier.
+        /// </summary>
+        /// <param name="teilnehmerId">Die ID des Teilnehmers.</param>
+        /// <param name="gruppeId">Die ID der Gruppe.</param>
+        /// <param name="turnierId">Die ID des Turniers.</param>
+        /// <returns>Die Anzahl der Siege für den angegebenen Teilnehmer, die Gruppe und das Turnier.</returns>
         private int GetAnzahlSiege(long teilnehmerId, long gruppeId, long turnierId)
         {
             try
@@ -296,8 +326,8 @@ namespace KlaskApi.Controllers
                  .Where(j => j.TurnierTeilnehmer.TurnierId == turnierId)
                .Join(_context.Gruppen, j => j.TurnierTeilnehmer.GruppeId, g => g.GruppeId, (j, g) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, Gruppe = g })
                .Join(_context.Runden, j => j.Spiel.RundeId, r => r.RundeId, (j, r) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, j.Gruppe, Runde = r })
+               /*Nur Spiele aus der Gruppenvorrunde zählen*/
                .Where(j => j.Runde.RundeBezeichnung.Contains("Gruppenvorrunde") && j.Runde.TurnierId == turnierId && j.TurnierTeilnehmer.GruppeId == gruppeId && j.SpieleTeilnehmer.Punkte != null)
-                /*Count only Spiele from the Gruppenvoorunde*/
                 .Join(_context.SpieleTeilnehmer, j => j.Spiel.SpielId, opp => opp.SpielId, (j, opp) => new { j.SpieleTeilnehmer, Opponent = opp })
                 .Where(j => j.Opponent.Punkte != null && j.SpieleTeilnehmer.Punkte > j.Opponent.Punkte)
                .Count();
@@ -307,11 +337,17 @@ namespace KlaskApi.Controllers
             catch (Exception ex)
             {
                 Console.WriteLine($"Error in GetAnzahlSiege: {ex.Message}");
-                // Handle exceptions appropriately, e.g., log or throw
                 throw;
             }
         }
 
+        /// <summary>
+        /// Berechnet die Satzdifferenz für einen bestimmten Teilnehmer in einer bestimmten Gruppe und einem bestimmten Turnier.
+        /// </summary>
+        /// <param name="teilnehmerId">Die ID des Teilnehmers.</param>
+        /// <param name="gruppeId">Die ID der Gruppe.</param>
+        /// <param name="turnierId">Die ID des Turniers.</param>
+        /// <returns>Die Satzdifferenz für den angegebenen Teilnehmer, die Gruppe und das Turnier.</returns>
         private long GetSatzDifferenz(long teilnehmerId, long gruppeId, long turnierId)
         {
             try
@@ -334,19 +370,21 @@ namespace KlaskApi.Controllers
             catch (Exception ex)
             {
                 Console.WriteLine($"Error in GetSatzDifferenz: {ex.Message}");
-                // Handle exceptions appropriately, e.g., log or throw
                 throw;
             }
         }
 
 
-
+        /// <summary>
+        /// Gibt die Details der Gruppenrunden für das aktive Turnier zurück.
+        /// </summary>
+        /// <returns>Die Details der Gruppenrunden für das aktive Turnier.</returns>
         [HttpGet("gruppenrundenDetails")]
         public async Task<ActionResult<object>> GruppenrundenDetails()
         {
             try
             {
-                // Get the active turnier
+                // Das aktive Turnier abrufen
                 var activeTurnier = await _context.Turniere.FirstOrDefaultAsync(t => t.IsActive);
 
                 if (activeTurnier == null)
@@ -354,7 +392,7 @@ namespace KlaskApi.Controllers
                     return NotFound("No active turnier found.");
                 }
 
-                // Get groups, participants, and games for the active turnier
+                // Gruppen, Teilnehmer und Spiele für das aktive Turnier abrufen
                 var turnierDetails = await _context.SpieleTeilnehmer
                     .Join(_context.Spiele,
                         st => st.SpielId,
@@ -407,13 +445,16 @@ namespace KlaskApi.Controllers
         }
 
 
-
+        /// <summary>
+        /// Gibt die Details des aktuellen Turniers zurück.
+        /// </summary>
+        /// <returns>Die Details des aktuellen Turniers.</returns>
         [HttpGet("currentTurnierDetails")]
         public async Task<ActionResult<object>> CurrentTurnierDetails()
         {
             try
             {
-                // Get the active turnier
+                // Das aktive Turnier abrufen
                 var activeTurnier = await _context.Turniere.FirstOrDefaultAsync(t => t.IsActive);
 
                 if (activeTurnier == null)
@@ -421,7 +462,7 @@ namespace KlaskApi.Controllers
                     return NotFound("No active turnier found.");
                 }
 
-                // Get groups and participants for the active turnier
+                // Gruppen und Teilnehmer für das aktive Turnier abrufen
                 var turnierDetails = await _context.Gruppen
                     .Join(_context.TurniereTeilnehmer,
                         g => g.GruppeId,
@@ -440,7 +481,6 @@ namespace KlaskApi.Controllers
                         {
                             TeilnehmerId = j.Teilnehmer.TeilnehmerId,
                             Vorname = j.Teilnehmer.Vorname,
-                            // Add other properties as needed
                         }
                     })
                     .GroupBy(j => new { j.GruppeId, j.Gruppenname })
@@ -463,40 +503,47 @@ namespace KlaskApi.Controllers
 
 
 
-        /*staring the Turnier*/
+        /// <summary>
+        /// Startet ein Turnier durch Gruppierung der Teilnehmer.
+        /// </summary>
+        /// <param name="turnierId">Die ID des Turniers, das gestartet werden soll.</param>
+        /// <returns>HTTP-Statuscode und ggf. erstellte Gruppen.</returns>
         [HttpPost("startTurnier")]
-        //[Route("start")]
         public async Task<IActionResult> StartTurnier([FromQuery] long turnierId)
         {
             if (turnierId <= 0)
             {
-                // Log or return a more specific error response for an invalid turnierId
+
                 return BadRequest("Invalid turnierId. TurnierId must be greater than 0.");
             }
 
             try
             {
+                // TeilnehmerGroupingService Klasse initizialisieren
                 var groupingService = new TeilnehmerGroupingService(_context);
                 var createdGroups = await groupingService.GroupTeilnehmer(turnierId);
 
                 if (createdGroups == null)
                 {
-                    // Handle the case where grouping failed
+
                     return BadRequest("Grouping failed. Check your data.");
                 }
 
-                // Return success response or createdGroups if needed
+
                 return Ok(createdGroups);
             }
             catch (Exception ex)
             {
-                // Handle exceptions appropriately
+
                 Console.WriteLine($"Error in StartTurnier: {ex.Message}");
                 return StatusCode(500, $"Internal Server Error: {ex.Message}");
             }
         }
 
-
+        /// <summary>
+        /// Ruft alle Turniere ab.
+        /// </summary>
+        /// <returns>Eine Liste der abgerufenen Turniere oder NotFound, falls keine vorhanden sind.</returns>
         // GET: api/Turnier
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Turnier>>> GetTurniere()
@@ -508,6 +555,12 @@ namespace KlaskApi.Controllers
             return await _context.Turniere.ToListAsync();
         }
 
+
+        /// <summary>
+        /// Ruft ein einzelnes Turnier anhand der angegebenen ID ab.
+        /// </summary>
+        /// <param name="id">Die ID des abzurufenden Turniers.</param>
+        /// <returns>Das abgerufene Turnier oder NotFound, falls nicht gefunden.</returns>
         // GET: api/Turnier/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Turnier>> GetTurnier(long id)
@@ -526,6 +579,12 @@ namespace KlaskApi.Controllers
             return turnier;
         }
 
+        /// <summary>
+        /// Aktualisiert ein vorhandenes Turnier anhand der angegebenen ID.
+        /// </summary>
+        /// <param name="id">Die ID des zu aktualisierenden Turniers.</param>
+        /// <param name="turnier">Die aktualisierten Informationen für das Turnier.</param>
+        /// <returns>NoContent bei erfolgreicher Aktualisierung, BadRequest bei ungültigen Eingaben und NotFound, falls das Turnier nicht gefunden wurde.</returns>
         // PUT: api/Turnier/5
         [HttpPut("{id}")]
         public async Task<IActionResult> PutTurnier(long id, Turnier turnier)
@@ -560,8 +619,12 @@ namespace KlaskApi.Controllers
             return NoContent();
         }
 
+        /// <summary>
+        /// Erstellt ein neues Turnier.
+        /// </summary>
+        /// <param name="turnier">Die Informationen für das neue Turnier.</param>
+        /// <returns>CreatedAtAction mit den erstellten Turnierinformationen bei erfolgreicher Erstellung oder Problem mit einer entsprechenden Meldung bei Fehlern.</returns>
         // POST: api/Turnier
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         public async Task<ActionResult<Turnier>> PostTurnier(Turnier turnier)
         {
@@ -580,6 +643,11 @@ namespace KlaskApi.Controllers
             return CreatedAtAction("GetTurnier", new { id = turnier.Id }, turnier);
         }
 
+        /// <summary>
+        /// Löscht ein vorhandenes Turnier anhand der Turnier-ID.
+        /// </summary>
+        /// <param name="id">Die ID des zu löschenden Turniers.</param>
+        /// <returns>NoContent bei erfolgreicher Löschung, NotFound falls das Turnier nicht gefunden wurde.</returns>
         // DELETE: api/Turnier/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteTurnier(long id)
@@ -600,6 +668,11 @@ namespace KlaskApi.Controllers
             return NoContent();
         }
 
+        /// <summary>
+        /// Überprüft, ob ein Turnier mit der angegebenen ID existiert.
+        /// </summary>
+        /// <param name="id">Die ID des zu überprüfenden Turniers.</param>
+        /// <returns>True, wenn das Turnier existiert; andernfalls False.</returns>
         private bool TurnierExists(long id)
         {
             return (_context.Turniere?.Any(e => e.Id == id)).GetValueOrDefault();
