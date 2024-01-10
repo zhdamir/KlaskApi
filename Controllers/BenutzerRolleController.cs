@@ -15,6 +15,7 @@ namespace KlaskApi.Controllers
     {
         private readonly TurnierContext _context;
 
+        // Konstruktor, der den Kontext für die Datenbankverbindung initialisiert
         public BenutzerRolleController(TurnierContext context)
         {
             _context = context;
@@ -24,10 +25,12 @@ namespace KlaskApi.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<BenutzerRolle>>> GetBenutzerRollen()
         {
-          if (_context.BenutzerRollen == null)
-          {
-              return NotFound();
-          }
+            // Überprüft, ob die BenutzerRollen-Entität vorhanden ist, andernfalls gibt es einen 404-Fehler zurück
+            if (_context.BenutzerRollen == null)
+            {
+                return NotFound();
+            }
+            // Ruft alle BenutzerRollen ab und gibt sie als Liste zurück
             return await _context.BenutzerRollen.ToListAsync();
         }
 
@@ -35,10 +38,10 @@ namespace KlaskApi.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<BenutzerRolle>> GetBenutzerRolle(long id)
         {
-          if (_context.BenutzerRollen == null)
-          {
-              return NotFound();
-          }
+            if (_context.BenutzerRollen == null)
+            {
+                return NotFound();
+            }
             var benutzerRolle = await _context.BenutzerRollen.FindAsync(id);
 
             if (benutzerRolle == null)
@@ -50,7 +53,6 @@ namespace KlaskApi.Controllers
         }
 
         // PUT: api/BenutzerRolle/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
         public async Task<IActionResult> PutBenutzerRolle(long id, BenutzerRolle benutzerRolle)
         {
@@ -85,10 +87,10 @@ namespace KlaskApi.Controllers
         [HttpPost]
         public async Task<ActionResult<BenutzerRolle>> PostBenutzerRolle(BenutzerRolle benutzerRolle)
         {
-          if (_context.BenutzerRollen == null)
-          {
-              return Problem("Entity set 'TurnierContext.BenutzerRollen'  is null.");
-          }
+            if (_context.BenutzerRollen == null)
+            {
+                return Problem("Entity set 'TurnierContext.BenutzerRollen'  is null.");
+            }
             _context.BenutzerRollen.Add(benutzerRolle);
             await _context.SaveChangesAsync();
 

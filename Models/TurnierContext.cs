@@ -23,7 +23,6 @@ public class TurnierContext : DbContext
     public DbSet<SpielTeilnehmer> SpieleTeilnehmer { get; set; }
     public DbSet<BenutzerRolle> BenutzerRollen { get; set; }
     public DbSet<TurnierTeilnehmer> TurniereTeilnehmer { get; set; }
-    public DbSet<LoginDaten> LoginDaten { get; set; }
 
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -38,7 +37,6 @@ public class TurnierContext : DbContext
         modelBuilder.Entity<SpielTeilnehmer>().ToTable("SpieleTeilnehmer");
         modelBuilder.Entity<BenutzerRolle>().ToTable("BenutzerRolle");
         modelBuilder.Entity<TurnierTeilnehmer>().ToTable("TurnierTeilnehmer");
-        modelBuilder.Entity<LoginDaten>().ToTable("LoginDaten");
 
 
         modelBuilder.Entity<Bereich>()
@@ -76,13 +74,6 @@ public class TurnierContext : DbContext
         .HasMany<TurnierTeilnehmer>()
         .WithOne()
         .HasForeignKey(tt => tt.GruppeId);
-
-
-        modelBuilder.Entity<LoginDaten>()
-        .HasOne<Teilnehmer>()
-        .WithOne()
-        .HasForeignKey<LoginDaten>(ld => ld.TeilnehmerId)
-        .IsRequired();
 
         modelBuilder.Entity<Turnier>()
         .HasMany<Runde>()
