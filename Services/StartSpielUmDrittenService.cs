@@ -13,35 +13,33 @@ namespace KlaskApi.Services
         private readonly TurnierContext _context;// to interact with database
 
         /// <summary>
-        /// Initialisiert eine neue Instanz des <see cref="StartSpielUmDrittenService"/> mit dem angegebenen Datenbankkontext.
+        /// Initialisiert eine neue Instanz des StartFinaleService mit dem angegebenen TurnierContext.
         /// </summary>
-        /// <param name="context">Der Datenbankkontext für das Turnier.</param>
+        /// <param name="context">Der TurnierContext, der für den Zugriff auf die Datenbank verwendet wird.</param>
         public StartSpielUmDrittenService(TurnierContext context)
         {
             _context = context;
         }
 
         /// <summary>
-        /// Führt das Spiel um den dritten Platz für das angegebene Turnier durch.
+        /// Generiert und ordnet Teilnehmer für das Finale basierend auf die Leistungen aus der Vorrunde zu.
         /// </summary>
-        /// <param name="turnierId">Die ID des Turniers, für das das Spiel um den dritten Platz durchgeführt werden soll.</param>
-        /// <returns>True, wenn das Spiel erfolgreich durchgeführt wurde; andernfalls false.</returns>
+        /// <param name="turnierId">Die ID des Turniers, für das das Finale generiert werden soll.</param>
+        /// <returns>Ein boolscher Wert, der angibt, ob die Operation erfolgreich war oder nicht.</returns>
         public async Task<bool> SpielUmDrittenTeilnehmer(long turnierId)
         {
             Console.WriteLine(turnierId);
             try
             {
-                // Hole die Teilnehmer mit der zweitbesten Platzierung aus der Vorrunde
-                List<Teilnehmer> bestTeilnehmer = GetSecondBestVorrundeTeilnehmer(turnierId);
-
+                // Holt die besten Performer aus der Vorrunde
+                List<Teilnehmer> bestTeilnehmer = GetBestVorrundeTeilnehmer(turnierId);
 
                 if (bestTeilnehmer == null)
                 {
                     Console.WriteLine("Teilnehmer is null!!!!");
                     return false;
                 }
-
-                // "SpielUmDritten" Runde erstellen
+                // Erstellt die Runde für das Finale
                 var createdFinale = GenerateFinale(turnierId);
 
                 if (createdFinale == null)
@@ -50,8 +48,11 @@ namespace KlaskApi.Services
                     return false;
 
                 }
+                // Speichert Änderungen in der Datenbank
                 await _context.SaveChangesAsync();
 
+
+                //Spiele für die finale Runde erstellen
                 var rundeId = createdFinale.RundeId;
                 var createdFinaleSpiele = GenerateFinaleSpiele(rundeId);
                 if (createdFinaleSpiele == null)
@@ -59,6 +60,8 @@ namespace KlaskApi.Services
                     Console.WriteLine($"Error creating Finale Spiele for RundeId: {rundeId}");
                     return false;
                 }
+
+                //Änderungen in der Datenbank speichen
                 await _context.SaveChangesAsync();
 
                 var createdSpielTeilnehmerFinale = GenerateSpielTeilnehmerFinale(rundeId, bestTeilnehmer, createdFinaleSpiele, turnierId);
@@ -81,10 +84,10 @@ namespace KlaskApi.Services
         }
 
         /// <summary>
-        /// Erstellt die Runde für das Spiel um den dritten Platz.
+        /// Erstellt eine neue Runde für das Finale im angegebenen Turnier.
         /// </summary>
-        /// <param name="turnierId">Die ID des Turniers, für das die Runde erstellt werden soll.</param>
-        /// <returns>Die erstellte Runde für das Spiel um den dritten Platz.</returns>
+        /// <param name="turnierId">Die ID des Turniers, zu dem das Finale gehört.</param>
+        /// <returns>Die neu erstellte Runde für das Finale.</returns>
         private Runde GenerateFinale(long turnierId)
         {
             var Finale = new Runde
@@ -97,43 +100,34 @@ namespace KlaskApi.Services
         }
 
         /// <summary>
-        /// Erstellt Spiele für das Spiel um den dritten Platz.
+        /// Erstellt eine Liste von Spielen für das Finale mit den angegebenen Runden-IDs.
         /// </summary>
-        /// <param name="rundeId">Die ID der Runde, für die Spiele erstellt werden sollen.</param>
-        /// <returns>Eine Liste von erstellten Spielen für das Spiel um den dritten Platz.</returns>
-        private List<Spiel> GenerateFinaleSpiele(long rundeId)
+        /// <param name="rundeId">Die ID der Runde, zu der die Spiele gehören sollen.</param>
+        /// <returns>Eine Liste von neu erstellten Spielen für das Finale.</returns>
+        private Spiel GenerateFinaleSpiele(long rundeId)
         {
-            var spieleList = new List<Spiel>();
-
-            // Create Spiele for "Spiel um dritten Platz" and "Spiel um ersten Platz"
-            var spielUmDrittenPlatz = new Spiel
-            {
-                RundeId = rundeId,
-            };
-
-            spieleList.Add(spielUmDrittenPlatz);
-            _context.Spiele.Add(spielUmDrittenPlatz);
 
             var spielUmErstenPlatz = new Spiel
             {
                 RundeId = rundeId,
             };
-            spieleList.Add(spielUmErstenPlatz);
+
             _context.Spiele.Add(spielUmErstenPlatz);
 
-            return spieleList;
+            return spielUmErstenPlatz;
         }
 
 
         /// <summary>
-        /// Ermittelt die Teilnehmer mit der zweitbesten Satzdifferenz in der Vorrunde.
+        /// Ermittelt die besten Teilnehmer der Vorrunde für das angegebene Turnier.
         /// </summary>
-        /// <param name="turnierId">Die ID des Turniers.</param>
-        /// <returns>Eine Liste von Teilnehmern mit der zweitbesten Satzdifferenz.</returns>
-        private List<Teilnehmer> GetSecondBestVorrundeTeilnehmer(long turnierId)
+        /// <param name="turnierId">Die ID des Turniers, für das die besten Teilnehmer ermittelt werden sollen.</param>
+        /// <returns>Eine Liste der besten Teilnehmer der Vorrunde.</returns>
+        private List<Teilnehmer> GetBestVorrundeTeilnehmer(long turnierId)
         {
             try
             {
+                // Eine Liste der besten Teilnehmer basierend auf der Satzdifferenz ermitteln
                 var bestTeilnehmerList = _context.SpieleTeilnehmer
                     .Join(_context.Spiele, st => st.SpielId, s => s.SpielId, (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
                     .Join(_context.Teilnehmer, j => j.SpieleTeilnehmer.TeilnehmerId, tn => tn.TeilnehmerId, (j, tn) => new { j.SpieleTeilnehmer, j.Spiel, Teilnehmer = tn })
@@ -170,6 +164,8 @@ namespace KlaskApi.Services
                     .Take(2)
                     .Select(entry => entry.TeilnehmerId)
                     .ToList();
+
+                // Die besten Teilnehmer aus der Liste der Teilnehmer-IDs ermitteln
                 var bestTeilnehmer = _context.Teilnehmer
                     .Where(tn => bestTeilnehmerList.Contains(tn.TeilnehmerId))
                     .ToList();
@@ -184,15 +180,16 @@ namespace KlaskApi.Services
 
 
         /// <summary>
-        /// Ermittelt die Satzdifferenz für einen Teilnehmer in der Vorrunde.
+        /// Ermittelt die Satzdifferenz für einen bestimmten Teilnehmer in der Vorrunde eines Turniers.
         /// </summary>
-        /// <param name="teilnehmerId">Die ID des Teilnehmers.</param>
-        /// <param name="turnierId">Die ID des Turniers.</param>
-        /// <returns>Die Satzdifferenz des Teilnehmers in der Vorrunde.</returns>
+        /// <param name="teilnehmerId">Die ID des Teilnehmers, für den die Satzdifferenz ermittelt werden soll.</param>
+        /// <param name="turnierId">Die ID des Turniers, zu dem die Vorrunde gehört.</param>
+        /// <returns>Die Satzdifferenz des Teilnehmers.</returns>
         private long GetSatzDifferenz(long teilnehmerId, long turnierId)
         {
             try
             {
+                //  die Satzdifferenz für den angegebenen Teilnehmer ermitteln
                 var satzDifferenz = _context.SpieleTeilnehmer
                 .Where(st => st.TeilnehmerId == teilnehmerId)
                 .Join(_context.Spiele, st => st.SpielId, s => s.SpielId, (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
@@ -214,49 +211,43 @@ namespace KlaskApi.Services
         }
 
         /// <summary>
-        /// Generiert SpielTeilnehmer-Entitäten für das Finale basierend auf den Teilnehmern und Spielen.
+        /// Generiert SpielTeilnehmer für die Finalrunde basierend auf den Teilnehmern und Spielen der Vorrunde.
         /// </summary>
-        /// <param name="rundeId">Die ID der Runde.</param>
-        /// <param name="teilnehmerList">Die Liste der Teilnehmer.</param>
-        /// <param name="spieleList">Die Liste der Spiele.</param>
+        /// <param name="rundeId">Die ID der Finalrunde.</param>
+        /// <param name="teilnehmerList">Die Liste der Teilnehmer, die sich für die Finalrunde qualifiziert haben.</param>
+        /// <param name="spieleList">Die Liste der Spiele für die Finalrunde.</param>
         /// <param name="turnierId">Die ID des Turniers.</param>
-        /// <returns>Liste von SpielTeilnehmer-Entitäten für das Finale.</returns>
-        private List<SpielTeilnehmer> GenerateSpielTeilnehmerFinale(long rundeId, List<Teilnehmer> teilnehmerList, List<Spiel> spieleList, long turnierId)
+        /// <returns>Die Liste der generierten SpielTeilnehmer für die Finalrunde.</returns>
+        private List<SpielTeilnehmer> GenerateSpielTeilnehmerFinale(long rundeId, List<Teilnehmer> teilnehmerList, Spiel spieleList, long turnierId)
         {
             var spieleTeilnehmerList = new List<SpielTeilnehmer>();
 
-            //eindeutige SpielIds generieren
-            var uniqueSpielIds = spieleList.Where(s => s.RundeId == rundeId).Select(s => s.SpielId).Distinct().ToList();
+            // Eindeutige SpielIds generieren
+            var uniqueSpielId = spieleList.SpielId;
 
-            // Überprüfe, ob genügend eindeutige SpielIds vorhanden sind
-            if (uniqueSpielIds.Count < 2)
-            {
-                Console.WriteLine("Error: Not enough unique SpielIds for matchups.");
-                return null;
-            }
 
-            //SatzDifferenz für jeden Teilnehmer berechenen
+            // Satzdifferenz für jeden Teilnehmer berechnen
             var teilnehmerWithScores = teilnehmerList.Select(teilnehmer => new
             {
                 Teilnehmer = teilnehmer,
                 SatzDifferenz = GetSatzDifferenz(teilnehmer.TeilnehmerId, turnierId)
             });
 
-            // Teilnehmer nach SatzDifferenz absteigend sortieren
+            // Teilnehmer nach Satzdifferenz absteigend sortieren
             var sortedTeilnehmer = teilnehmerWithScores.OrderByDescending(entry => entry.SatzDifferenz).ToList();
 
-            // Erstelle SpielTeilnehmer-Entitäten für das Spiel um den ersten Platz
-            var firstPlaceSpielId = uniqueSpielIds.FirstOrDefault();
+            // SpielTeilnehmer-Entitäten für das Spiel um den ersten Platz erstellen
 
-            if (firstPlaceSpielId != 0)
+
+            if (uniqueSpielId != 0)
             {
-                uniqueSpielIds.Remove(firstPlaceSpielId);
+
 
                 foreach (var teilnehmerEntry in sortedTeilnehmer.Take(2))
                 {
                     var spielTeilnehmer = new SpielTeilnehmer
                     {
-                        SpielId = firstPlaceSpielId,
+                        SpielId = uniqueSpielId,
                         TeilnehmerId = teilnehmerEntry.Teilnehmer.TeilnehmerId,
                         Punkte = null,
                     };
@@ -273,33 +264,7 @@ namespace KlaskApi.Services
                 return null;
             }
 
-            // Erstelle SpielTeilnehmer-Entitäten für das Spiel um den dritten Platz
-            var thirdPlaceSpielId = uniqueSpielIds.FirstOrDefault();
 
-            if (thirdPlaceSpielId != 0)
-            {
-                uniqueSpielIds.Remove(thirdPlaceSpielId);
-
-                foreach (var teilnehmerEntry in sortedTeilnehmer.Skip(2).Take(2))
-                {
-                    var spielTeilnehmer = new SpielTeilnehmer
-                    {
-                        SpielId = thirdPlaceSpielId,
-                        TeilnehmerId = teilnehmerEntry.Teilnehmer.TeilnehmerId,
-                        Punkte = null,
-                    };
-
-                    spieleTeilnehmerList.Add(spielTeilnehmer);
-                    _context.SpieleTeilnehmer.Add(spielTeilnehmer);
-
-                    Console.WriteLine($"Created SpielTeilnehmer for third place matchup: SpielId = {spielTeilnehmer.SpielId}, TeilnehmerId = {spielTeilnehmer.TeilnehmerId}");
-                }
-            }
-            else
-            {
-                Console.WriteLine("Error: No valid SpielId found for third place matchup.");
-                return null;
-            }
 
             return spieleTeilnehmerList;
         }
