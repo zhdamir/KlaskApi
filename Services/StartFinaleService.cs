@@ -113,6 +113,9 @@ namespace KlaskApi.Services
             };
 
             _context.Spiele.Add(spielUmErstenPlatz);
+            // Save changes to the database to ensure SpielId is assigned
+            _context.SaveChanges();
+
 
             return spielUmErstenPlatz;
         }
@@ -222,7 +225,17 @@ namespace KlaskApi.Services
             var spieleTeilnehmerList = new List<SpielTeilnehmer>();
 
             // Eindeutige SpielIds generieren
-            var uniqueSpielId = spieleList.SpielId;
+            //var uniqueSpielId = spieleList.SpielId;
+
+            // Eindeutige SpielIds generieren
+            var uniqueSpielId = spieleList?.SpielId ?? 0;  // Use the SpielId from spieleList if available
+
+            if (uniqueSpielId == 0)
+            {
+                // If spieleList.SpielId is not available, create a new Spiel entity and save it to get a valid SpielId
+                var newSpiel = GenerateFinaleSpiele(rundeId);
+                uniqueSpielId = newSpiel.SpielId;
+            }
 
 
             // Satzdifferenz für jeden Teilnehmer berechnen

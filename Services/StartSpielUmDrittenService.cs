@@ -32,13 +32,18 @@ namespace KlaskApi.Services
             try
             {
                 // Holt die besten Performer aus der Vorrunde
-                List<Teilnehmer> bestTeilnehmer = GetBestVorrundeTeilnehmer(turnierId);
+                var allTeilnehmer = GetVorrundeTeilnehmer(turnierId);
 
-                if (bestTeilnehmer == null)
+                if (allTeilnehmer == null)
                 {
                     Console.WriteLine("Teilnehmer is null!!!!");
                     return false;
                 }
+
+                var hashMapTeilnehmer = CalculateSatzDifferenzForVorrunde(allTeilnehmer, turnierId);
+
+                var bestTeilnehmer = GetBestTeilnehmerForSpielUmDritten(hashMapTeilnehmer);
+
                 // Erstellt die Runde für das Finale
                 var createdFinale = GenerateFinale(turnierId);
 
@@ -96,6 +101,8 @@ namespace KlaskApi.Services
                 TurnierId = turnierId,
             };
             _context.Runden.Add(Finale);
+            // Save changes to the database to ensure SpielId is assigned
+            _context.SaveChanges();
             return Finale;
         }
 
@@ -113,68 +120,124 @@ namespace KlaskApi.Services
             };
 
             _context.Spiele.Add(spielUmErstenPlatz);
+            // Save changes to the database to ensure SpielId is assigned
+            _context.SaveChanges();
+
 
             return spielUmErstenPlatz;
         }
-
 
         /// <summary>
         /// Ermittelt die besten Teilnehmer der Vorrunde für das angegebene Turnier.
         /// </summary>
         /// <param name="turnierId">Die ID des Turniers, für das die besten Teilnehmer ermittelt werden sollen.</param>
         /// <returns>Eine Liste der besten Teilnehmer der Vorrunde.</returns>
-        private List<Teilnehmer> GetBestVorrundeTeilnehmer(long turnierId)
+
+        private List<Teilnehmer> GetVorrundeTeilnehmer(long turnierId)
         {
             try
             {
-                // Eine Liste der besten Teilnehmer basierend auf der Satzdifferenz ermitteln
-                var bestTeilnehmerList = _context.SpieleTeilnehmer
+                var vorrundeTeilnehmerList = _context.SpieleTeilnehmer
                     .Join(_context.Spiele, st => st.SpielId, s => s.SpielId, (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
                     .Join(_context.Teilnehmer, j => j.SpieleTeilnehmer.TeilnehmerId, tn => tn.TeilnehmerId, (j, tn) => new { j.SpieleTeilnehmer, j.Spiel, Teilnehmer = tn })
                     .Join(_context.TurniereTeilnehmer, j => j.Teilnehmer.TeilnehmerId, tt => tt.TeilnehmerId, (j, tt) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, TurnierTeilnehmer = tt })
                     .Join(_context.Gruppen, j => j.TurnierTeilnehmer.GruppeId, g => g.GruppeId, (j, g) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, Gruppe = g })
                     .Join(_context.Runden, j => j.Spiel.RundeId, r => r.RundeId, (j, r) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, j.Gruppe, Runde = r })
                     .Where(j => j.Runde.RundeBezeichnung.Contains("Vorrunde") && j.Runde.TurnierId == turnierId)
-                    .Join(_context.Turniere, j => j.Runde.TurnierId, t => t.Id, (j, t) => new
-                    {
-                        Teilnehmer = j.Teilnehmer,
-                        GruppeId = j.Gruppe.GruppeId,
-                        Gruppenname = j.Gruppe.Gruppenname,
-                        RundeBezeichnung = j.Runde.RundeBezeichnung,
-                        SatzDifferenz = _context.SpieleTeilnehmer
-                            .Where(st => st.TeilnehmerId == j.Teilnehmer.TeilnehmerId)
-                            .Join(_context.Spiele, st => st.SpielId, s => s.SpielId, (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
-                            .Join(_context.Teilnehmer, innerJ => innerJ.SpieleTeilnehmer.TeilnehmerId, tn => tn.TeilnehmerId, (innerJ, tn) => new { innerJ.SpieleTeilnehmer, innerJ.Spiel, Teilnehmer = tn })
-                            .Join(_context.TurniereTeilnehmer, innerJ => innerJ.Teilnehmer.TeilnehmerId, tt => tt.TeilnehmerId, (innerJ, tt) => new { innerJ.SpieleTeilnehmer, innerJ.Spiel, innerJ.Teilnehmer, TurnierTeilnehmer = tt })
-                            .Join(_context.Gruppen, innerJ => innerJ.TurnierTeilnehmer.GruppeId, g => g.GruppeId, (innerJ, g) => new { innerJ.SpieleTeilnehmer, innerJ.Spiel, innerJ.Teilnehmer, innerJ.TurnierTeilnehmer, Gruppe = g })
-                            .Join(_context.Runden, innerJ => innerJ.Spiel.RundeId, innerR => innerR.RundeId, (innerJ, innerR) => new { innerJ.SpieleTeilnehmer, innerJ.Spiel, innerJ.Teilnehmer, innerJ.TurnierTeilnehmer, innerJ.Gruppe, InnerRunde = innerR })
-                            .Where(innerJ => innerJ.InnerRunde.RundeBezeichnung.Contains("Vorrunde") && innerJ.InnerRunde.TurnierId == turnierId && innerJ.SpieleTeilnehmer.Punkte != null)
-                            .Join(_context.SpieleTeilnehmer, innerJ => innerJ.Spiel.SpielId, opp => opp.SpielId, (innerJ, opp) => new { innerJ.SpieleTeilnehmer, Opponent = opp })
-                            .Where(innerJ => innerJ.Opponent.Punkte != null)
-                            .Sum(innerJ => (innerJ.SpieleTeilnehmer.Punkte - innerJ.Opponent.Punkte).GetValueOrDefault())
-                    })
-                    .GroupBy(j => j.Teilnehmer.TeilnehmerId)
-                    .Select(group => new
-                    {
-                        TeilnehmerId = group.Key,
-                        BestSatzDifferenz = group.Max(j => j.SatzDifferenz)
-                    })
-                    .OrderByDescending(entry => entry.BestSatzDifferenz)
-                    .Skip(2)
-                    .Take(2)
-                    .Select(entry => entry.TeilnehmerId)
+                    .Select(j => j.Teilnehmer)
+                    .Distinct()  // To ensure unique Teilnehmer in the result
                     .ToList();
 
-                // Die besten Teilnehmer aus der Liste der Teilnehmer-IDs ermitteln
-                var bestTeilnehmer = _context.Teilnehmer
-                    .Where(tn => bestTeilnehmerList.Contains(tn.TeilnehmerId))
-                    .ToList();
+                return vorrundeTeilnehmerList;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in GetVorrundeTeilnehmer: {ex.Message}");
+                return null;
+            }
+        }
+
+        private Dictionary<Teilnehmer, long> CalculateSatzDifferenzForVorrunde(List<Teilnehmer> vorrundeTeilnehmer, long turnierId)
+        {
+            try
+            {
+                var satzDifferenzMap = new Dictionary<Teilnehmer, long>();
+
+                foreach (var teilnehmer in vorrundeTeilnehmer)
+                {
+
+
+
+                    // Find the GruppeId for the given Turnier and Teilnehmer
+                    var gruppeId = _context.TurniereTeilnehmer
+                        .Where(tt => tt.TurnierId == turnierId && tt.TeilnehmerId == teilnehmer.TeilnehmerId)
+                        .Select(tt => tt.GruppeId)
+                        .FirstOrDefault();
+
+                    // long satzDifferenz = GetSatzDifferenz2(teilnehmer.TeilnehmerId, gruppeId, turnierId);
+                    long satzDifferenz = gruppeId.HasValue
+                    ? GetSatzDifferenz2(teilnehmer.TeilnehmerId, gruppeId.Value, turnierId)
+                    : 0;
+
+                    // Add the Teilnehmer and SatzDifferenz to the Dictionary
+                    satzDifferenzMap.Add(teilnehmer, satzDifferenz);
+                }
+
+                return satzDifferenzMap;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in CalculateSatzDifferenzForVorrunde: {ex.Message}");
+                return null;
+            }
+        }
+
+        private List<Teilnehmer> GetBestTeilnehmerForSpielUmDritten(Dictionary<Teilnehmer, long> satzDifferenzMap)
+        {
+            try
+            {
+                // Order the Teilnehmer based on Satz Diffs in ascending order
+                var orderedTeilnehmer = satzDifferenzMap.OrderBy(pair => pair.Value).ToList();
+
+                // Take the 3rd and 4th Teilnehmer (index 2 and 3 in a zero-based index)
+                var bestTeilnehmer = orderedTeilnehmer.Skip(2).Take(2).Select(pair => pair.Key).ToList();
+
                 return bestTeilnehmer;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error in GruppenrundenDetails: {ex.Message}");
+                Console.WriteLine($"Error in GetBestTeilnehmerForSpielUmDritten: {ex.Message}");
                 return null;
+            }
+        }
+
+
+
+        private long GetSatzDifferenz2(long teilnehmerId, long gruppeId, long turnierId)
+        {
+            try
+            {
+                // Satzdifferenz des Teilnehmers in der Vorunde abrufen
+                var satzDifferenz = _context.SpieleTeilnehmer
+                .Where(st => st.TeilnehmerId == teilnehmerId)
+                .Join(_context.Spiele, st => st.SpielId, s => s.SpielId, (st, s) => new { SpieleTeilnehmer = st, Spiel = s })
+                .Join(_context.Teilnehmer, j => j.SpieleTeilnehmer.TeilnehmerId, tn => tn.TeilnehmerId, (j, tn) => new { j.SpieleTeilnehmer, j.Spiel, Teilnehmer = tn })
+                .Join(_context.TurniereTeilnehmer, j => j.Teilnehmer.TeilnehmerId, tt => tt.TeilnehmerId, (j, tt) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, TurnierTeilnehmer = tt })
+                .Where(j => j.TurnierTeilnehmer.TurnierId == turnierId)
+                .Join(_context.Gruppen, j => j.TurnierTeilnehmer.GruppeId, g => g.GruppeId, (j, g) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, Gruppe = g })
+                .Join(_context.Runden, j => j.Spiel.RundeId, r => r.RundeId, (j, r) => new { j.SpieleTeilnehmer, j.Spiel, j.Teilnehmer, j.TurnierTeilnehmer, j.Gruppe, Runde = r })
+                .Where(j => j.Runde.RundeBezeichnung.Contains("Vorrunde") && j.Runde.TurnierId == turnierId && j.TurnierTeilnehmer.GruppeId == gruppeId && j.SpieleTeilnehmer.Punkte != null)
+                .Join(_context.SpieleTeilnehmer, j => j.Spiel.SpielId, opp => opp.SpielId, (j, opp) => new { j.SpieleTeilnehmer, Opponent = opp })
+                .Where(j => j.Opponent.Punkte != null)
+                 .Sum(j => (j.SpieleTeilnehmer.Punkte - j.Opponent.Punkte).GetValueOrDefault());
+
+                return satzDifferenz;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in GetSatzDifferenz: {ex.Message}");
+                // Handle exceptions appropriately, e.g., log or throw
+                throw;
             }
         }
 
@@ -222,51 +285,44 @@ namespace KlaskApi.Services
         {
             var spieleTeilnehmerList = new List<SpielTeilnehmer>();
 
-            // Eindeutige SpielIds generieren
-            var uniqueSpielId = spieleList.SpielId;
-
-
-            // Satzdifferenz für jeden Teilnehmer berechnen
-            var teilnehmerWithScores = teilnehmerList.Select(teilnehmer => new
+            try
             {
-                Teilnehmer = teilnehmer,
-                SatzDifferenz = GetSatzDifferenz(teilnehmer.TeilnehmerId, turnierId)
-            });
+                if (spieleList == null || spieleList.SpielId == 0)
+                {
+                    Console.WriteLine("Error: Invalid or null SpielId in spieleList.");
+                    return null;
+                }
 
-            // Teilnehmer nach Satzdifferenz absteigend sortieren
-            var sortedTeilnehmer = teilnehmerWithScores.OrderByDescending(entry => entry.SatzDifferenz).ToList();
+                // Order participants by Satzdifferenz in descending order
+                // var sortedTeilnehmer = teilnehmerWithScores.OrderByDescending(entry => entry.SatzDifferenz).ToList();
 
-            // SpielTeilnehmer-Entitäten für das Spiel um den ersten Platz erstellen
-
-
-            if (uniqueSpielId != 0)
-            {
-
-
-                foreach (var teilnehmerEntry in sortedTeilnehmer.Take(2))
+                // Create SpielTeilnehmer entities for the Spiel
+                foreach (var teilnehmerEntry in teilnehmerList)
                 {
                     var spielTeilnehmer = new SpielTeilnehmer
                     {
-                        SpielId = uniqueSpielId,
-                        TeilnehmerId = teilnehmerEntry.Teilnehmer.TeilnehmerId,
+                        SpielId = spieleList.SpielId,
+                        TeilnehmerId = teilnehmerEntry.TeilnehmerId,
                         Punkte = null,
                     };
 
                     spieleTeilnehmerList.Add(spielTeilnehmer);
                     _context.SpieleTeilnehmer.Add(spielTeilnehmer);
+                    // Save changes to the database to ensure SpielId is assigned
+                    _context.SaveChanges();
 
-                    Console.WriteLine($"Created SpielTeilnehmer for first place matchup: SpielId = {spielTeilnehmer.SpielId}, TeilnehmerId = {spielTeilnehmer.TeilnehmerId}");
                 }
+
+                _context.SaveChanges();
+                return spieleTeilnehmerList;
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine("Error: No valid SpielId found for first place matchup.");
+                Console.WriteLine($"Error in GenerateSpielTeilnehmerFinale: {ex.Message}");
                 return null;
             }
-
-
-
-            return spieleTeilnehmerList;
         }
+
     }
 }
+
