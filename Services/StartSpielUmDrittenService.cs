@@ -192,12 +192,33 @@ namespace KlaskApi.Services
             }
         }
 
+        /* private List<Teilnehmer> GetBestTeilnehmerForSpielUmDritten(Dictionary<Teilnehmer, long> satzDifferenzMap)
+         {
+             try
+             {
+                 // Order the Teilnehmer based on Satz Diffs in ascending order
+                 var orderedTeilnehmer = satzDifferenzMap.OrderBy(pair => pair.Value).ToList();
+
+                 // Take the 3rd and 4th Teilnehmer (index 2 and 3 in a zero-based index)
+                 var bestTeilnehmer = orderedTeilnehmer.Skip(2).Take(2).Select(pair => pair.Key).ToList();
+
+                 return bestTeilnehmer;
+             }
+             catch (Exception ex)
+             {
+                 Console.WriteLine($"Error in GetBestTeilnehmerForSpielUmDritten: {ex.Message}");
+                 return null;
+             }
+         }*/
+
         private List<Teilnehmer> GetBestTeilnehmerForSpielUmDritten(Dictionary<Teilnehmer, long> satzDifferenzMap)
         {
             try
             {
-                // Order the Teilnehmer based on Satz Diffs in ascending order
-                var orderedTeilnehmer = satzDifferenzMap.OrderBy(pair => pair.Value).ToList();
+                // Order the Teilnehmer based on Satz Diffs in ascending order and then by Vorname
+                var orderedTeilnehmer = satzDifferenzMap.OrderBy(pair => pair.Value)
+                                                       .ThenBy(pair => pair.Key.Vorname)
+                                                       .ToList();
 
                 // Take the 3rd and 4th Teilnehmer (index 2 and 3 in a zero-based index)
                 var bestTeilnehmer = orderedTeilnehmer.Skip(2).Take(2).Select(pair => pair.Key).ToList();
@@ -210,6 +231,7 @@ namespace KlaskApi.Services
                 return null;
             }
         }
+
 
 
 
